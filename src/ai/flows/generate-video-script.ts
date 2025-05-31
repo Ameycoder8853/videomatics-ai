@@ -16,6 +16,7 @@ const GenerateVideoScriptInputSchema = z.object({
   topic: z.string().describe('The topic of the video.'),
   style: z.string().optional().describe('The style of the video (e.g., educational, funny, corporate).'),
   duration: z.string().optional().describe('The desired duration category of the video (e.g., short: <1min, medium: 1-3min, long: >3min). This guides the number of scenes.'),
+  imageDurationInSeconds: z.number().optional().describe('The approximate duration in seconds each scene image will be shown. This helps guide the length of contentText for narration.')
 });
 export type GenerateVideoScriptInput = z.infer<typeof GenerateVideoScriptInputSchema>;
 
@@ -40,16 +41,17 @@ const generateVideoScriptPrompt = ai.definePrompt({
   input: {schema: GenerateVideoScriptInputSchema},
   output: {schema: GenerateVideoScriptOutputSchema},
   prompt: `You are a creative video scriptwriter and visual director.
-Generate a video script based on the given topic, style, and desired duration category.
+Generate a video script based on the given topic, style, desired duration category, and approximate duration per scene.
 The video's length will be determined by the number of scenes you generate and the content within them.
 
 - For a "short" duration, aim for 3-5 scenes.
 - For a "medium" duration, aim for 5-8 scenes.
-- For a "long" duration, aim for 8-15 scenes to create a video around 30-60 seconds.
+- For a "long" duration, aim for 8-15 scenes.
 
+Each scene's visual will last approximately {{#if imageDurationInSeconds}}{{{imageDurationInSeconds}}} seconds{{else}}3-5 seconds{{/if}}.
 For each scene in the script, provide:
 1.  \`imagePrompt\`: A detailed prompt for an AI image generator to create a realistic visual for the scene, suitable for a portrait (1080x1920) aspect ratio. Describe the scene, subjects, environment, mood, and style effectively.
-2.  \`contentText\`: The voiceover script or text content that will be narrated or displayed during this scene. Keep it concise, ideally 1-2 short sentences per scene.
+2.  \`contentText\`: The voiceover script or text content. It MUST be concise enough to be comfortably narrated in about {{#if imageDurationInSeconds}}{{{imageDurationInSeconds}}} seconds{{else}}3-5 seconds{{/if}}. Aim for 1-3 short sentences per scene.
 
 The output MUST be a JSON object matching the following schema:
 {
@@ -57,7 +59,7 @@ The output MUST be a JSON object matching the following schema:
   "scenes": [
     {
       "imagePrompt": "string (Detailed prompt for a portrait 1080x1920 realistic image.)",
-      "contentText": "string (Concise voiceover script for the scene, 1-2 sentences.)"
+      "contentText": "string (Concise voiceover script for the scene, fitting the scene duration.)"
     }
     // ... more scenes
   ]
@@ -66,6 +68,7 @@ The output MUST be a JSON object matching the following schema:
 Topic: {{{topic}}}
 Style: {{{style}}}
 Desired Duration Category: {{{duration}}}
+Approximate seconds per scene visual: {{#if imageDurationInSeconds}}{{{imageDurationInSeconds}}}{{else}}Not specified, assume 3-5{{/if}}
 
 Respond ONLY with the JSON object. Do not include any other text before or after the JSON.
 `,

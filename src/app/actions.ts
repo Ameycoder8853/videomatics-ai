@@ -163,3 +163,4 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     transcript: 'This is a placeholder transcript for the provided audio.'
   };
 }
+

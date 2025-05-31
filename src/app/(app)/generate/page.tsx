@@ -35,13 +35,21 @@ export default function GeneratePage() {
     setGeneratedImages(null);
     setGeneratedAudioUri(null);
     setRemotionProps(null);
-    const estimatedInitialDuration = 10 * (data.imageDurationInFrames || defaultImageDurationInFrames);
+    const estimatedInitialDuration = 10 * (data.imageDurationInFrames || defaultImageDurationInFrames); // Estimate based on up to 10 scenes initially
     setPlayerDuration(estimatedInitialDuration);
 
     try {
       // 1. Generate Script
       toast({ title: 'Generating script...', description: 'AI is crafting your narrative and visual cues.' });
-      const currentScriptResult = await generateScriptAction({ topic: data.topic, style: data.style, duration: data.duration });
+      const imageDurationInSeconds = Math.round((data.imageDurationInFrames || defaultImageDurationInFrames) / 30); // Assuming 30 FPS
+
+      const currentScriptResult = await generateScriptAction({
+        topic: data.topic,
+        style: data.style,
+        duration: data.duration,
+        imageDurationInSeconds,
+      });
+
       if (!currentScriptResult || !currentScriptResult.scenes || currentScriptResult.scenes.length === 0) {
         throw new Error('Script generation failed or returned no scenes.');
       }
@@ -79,9 +87,9 @@ export default function GeneratePage() {
         title: currentScriptResult.title,
         sceneTexts: sceneTexts,
         imageUris: imagesResult.imageUrls,
-        audioUri: audioResult.audioUrl, // Use dynamically generated audio
-        musicUri: '/placeholder-music.mp3', // Keep placeholder music for now
-        captions: fullScriptText,
+        audioUri: audioResult.audioUrl, 
+        musicUri: '/placeholder-music.mp3', 
+        captions: fullScriptText, // This could be improved later with per-scene captions
         primaryColor: data.primaryColor || defaultPrimaryColor,
         secondaryColor: data.secondaryColor || defaultSecondaryColor,
         fontFamily: data.fontFamily || defaultFontFamily,
@@ -89,7 +97,8 @@ export default function GeneratePage() {
       };
       setRemotionProps(currentRemotionProps);
 
-      const newPlayerDuration = imagesResult.imageUrls.length * (data.imageDurationInFrames || defaultImageDurationInFrames);
+      // Calculate player duration based on the actual number of generated images/scenes
+      const newPlayerDuration = currentScriptResult.scenes.length * (data.imageDurationInFrames || defaultImageDurationInFrames);
       setPlayerDuration(newPlayerDuration);
 
     } catch (error: any) {
@@ -145,11 +154,11 @@ export default function GeneratePage() {
               defaultValues={{
                 topic: 'A short interesting historical story',
                 style: 'cinematic',
-                duration: 'long',
+                duration: 'long', // Requesting more scenes
                 primaryColor: defaultPrimaryColor.toString(),
                 secondaryColor: defaultSecondaryColor.toString(),
                 fontFamily: defaultFontFamily,
-                imageDurationInFrames: defaultImageDurationInFrames,
+                imageDurationInFrames: defaultImageDurationInFrames, // Default is 120 frames (4s)
               }}
             />
           </CardContent>
@@ -173,7 +182,7 @@ export default function GeneratePage() {
               <>
                 <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[320px] mx-auto" style={{ aspectRatio: '9/16', height: 'auto' }}>
                    <RemotionPlayer
-                    key={JSON.stringify(remotionProps) + playerDuration} // Force re-render if props or duration change
+                    key={JSON.stringify(remotionProps) + playerDuration} 
                     compositionId="MyVideo"
                     inputProps={remotionProps}
                     controls
