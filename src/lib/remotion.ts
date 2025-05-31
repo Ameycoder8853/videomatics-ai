@@ -2,49 +2,55 @@
 'use client';
 
 import { renderMedia, RenderMediaOnProgress } from '@remotion/renderer/client';
-import { पत्र } from 'remotion'; // Correct type for Composition
+import { getCompositions } from 'remotion'; // Correct import for discovering compositions
 import type { CompositionProps } from '@/remotion/MyVideo'; // Import your composition's props type
 import { RemotionRoot } from '@/remotion/Root'; // Import your Root component where compositions are registered
 
 interface RenderParams {
   compositionId: string;
-  inputProps: CompositionProps;
+  inputProps: CompositionProps; // This should be the fully resolved props
   onProgress?: RenderMediaOnProgress;
   // Add other options from RenderMediaOptions if needed, e.g. codec, imageFormat, quality
 }
 
 export const handleClientSideRender = async ({ compositionId, inputProps, onProgress }: RenderParams): Promise<void> => {
   try {
-    // Ensure RemotionRoot has registered the compositions.
-    const compositions = पत्र({
-      renderable: RemotionRoot,
-      calculateMetadata: async () => ({
-        // Provide dummy metadata or calculate if necessary
-        durationInFrames: 300, // Example
-        fps: 30,
-        width: 1080,
-        height: 1920,
-        props: inputProps,
-      }),
-    }).compositions;
+    // The getCompositions function needs the input props to correctly calculate metadata like duration.
+    const compositions = getCompositions(RemotionRoot, {
+      inputProps: inputProps, // Pass the actual inputProps here
+    });
 
-    const composition = compositions.find((c) => c.id === compositionId);
-    if (!composition) {
+    const compositionInfo = compositions.find((c) => c.id === compositionId);
+    if (!compositionInfo) {
       throw new Error(`Composition with ID '${compositionId}' not found.`);
     }
-    
+
+    // Calculate dynamic duration based on inputProps
+    const numberOfScenes = inputProps.sceneTexts?.length || inputProps.imageUris?.length || 1;
+    const durationPerScene = inputProps.imageDurationInFrames || 120; // Default to 120 frames if not specified
+    const actualDurationInFrames = numberOfScenes * durationPerScene;
+    const actualFps = 30; // Assuming consistent FPS for the composition
+
+    console.log("Calculated duration for renderMedia:", actualDurationInFrames, "frames");
+    console.log("Number of scenes:", numberOfScenes, "Duration per scene:", durationPerScene, "frames");
+    console.log("Input props for renderMedia:", inputProps);
+
+
     const blob = await renderMedia({
-      composition: composition, // Pass the found composition object directly
-      inputProps,
+      // Pass the Composition object obtained from getCompositions.
+      // Override its durationInFrames with our dynamically calculated one.
+      composition: {
+        ...compositionInfo,
+        durationInFrames: actualDurationInFrames, 
+        props: inputProps, 
+      },
+      inputProps: inputProps, // renderMedia also expects inputProps separately
       codec: 'h264',
       imageFormat: 'jpeg',
       outputFormat: 'mp4',
-      fps: composition.fps, 
-      // Explicitly setting common dimensions for safety if metadata is not fully populated
-      // and to ensure consistency, as composition.width/height from metadata might not always be reliable
-      // for renderMedia unless meticulously set up.
-      width: 1080,
-      height: 1920,
+      fps: actualFps, // Use the defined FPS
+      width: compositionInfo.width, 
+      height: compositionInfo.height, 
       onProgress,
     });
 
