@@ -6,85 +6,79 @@ import { VideoForm, type VideoFormValues } from '@/components/VideoForm';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Loader2, Play, Image as ImageIcon } from 'lucide-react';
-import { generateScriptAction, summarizeScriptAction, generateImagesAction } from '@/app/actions'; // Updated to generateImagesAction
+import { Download, Loader2, Play, Image as ImageIcon, FileText, Palette, TypeIcon, ClockIcon } from 'lucide-react';
+import { generateScriptAction, generateImagesAction } from '@/app/actions';
+import type { GenerateVideoScriptOutput, Scene } from '@/ai/flows/generate-video-script';
 import { useToast } from '@/hooks/use-toast';
 import { handleClientSideRender } from '@/lib/remotion';
 import type { CompositionProps } from '@/remotion/MyVideo';
-import { myVideoSchema } from '@/remotion/MyVideo'; // Import schema for default values
-
-interface GeneratedImageData { url: string; keywords: string; } // For displaying one image, if needed. Could be an array.
+import { myVideoSchema } from '@/remotion/MyVideo';
 
 export default function GeneratePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [script, setScript] = useState<string | null>(null);
-  const [keywords, setKeywords] = useState<string | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<string[] | null>(null); // Stores array of image URLs
-  const [currentKeywordsForDisplay, setCurrentKeywordsForDisplay] = useState<string | null>(null);
-
-
+  const [scriptResult, setScriptResult] = useState<GenerateVideoScriptOutput | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<string[] | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [remotionProps, setRemotionProps] = useState<CompositionProps | null>(null);
   const [playerDuration, setPlayerDuration] = useState<number>(300); // Default player duration
 
-  // Get default values from Zod schema
-  const defaultPrimaryColor = myVideoSchema.shape.primaryColor.parse(undefined).toString();
-  const defaultSecondaryColor = myVideoSchema.shape.secondaryColor.parse(undefined).toString();
+  const defaultPrimaryColor = myVideoSchema.shape.primaryColor.parse(undefined);
+  const defaultSecondaryColor = myVideoSchema.shape.secondaryColor.parse(undefined);
   const defaultFontFamily = myVideoSchema.shape.fontFamily.parse(undefined);
   const defaultImageDurationInFrames = myVideoSchema.shape.imageDurationInFrames.parse(undefined);
 
-
   const handleFormSubmit = async (data: VideoFormValues) => {
     setIsLoading(true);
-    setScript(null);
-    setKeywords(null);
+    setScriptResult(null);
     setGeneratedImages(null);
-    setCurrentKeywordsForDisplay(null);
     setRemotionProps(null);
-    setPlayerDuration(myVideoSchema.shape.imageDurationInFrames.parse(undefined) * 3); // Initial sensible default for 3 images
+    // Estimate duration based on typical "long" script having ~10 scenes * default image duration
+    const estimatedInitialDuration = 10 * (data.imageDurationInFrames || defaultImageDurationInFrames);
+    setPlayerDuration(estimatedInitialDuration);
 
     try {
       // 1. Generate Script
-      toast({ title: 'Generating script...', description: 'Hang tight, AI is crafting your narrative.' });
-      const scriptResult = await generateScriptAction({ topic: data.topic, style: data.style, duration: data.duration });
-      if (!scriptResult.script) throw new Error('Script generation failed');
-      setScript(scriptResult.script);
-      toast({ title: 'Script generated!', variant: 'default' });
+      toast({ title: 'Generating script...', description: 'AI is crafting your narrative and visual cues.' });
+      const currentScriptResult = await generateScriptAction({ topic: data.topic, style: data.style, duration: data.duration });
+      if (!currentScriptResult || !currentScriptResult.scenes || currentScriptResult.scenes.length === 0) {
+        throw new Error('Script generation failed or returned no scenes.');
+      }
+      setScriptResult(currentScriptResult);
+      toast({ title: 'Script generated!', description: `"${currentScriptResult.title}" with ${currentScriptResult.scenes.length} scenes.` });
 
-      // 2. Summarize Script into Keywords
-      toast({ title: 'Extracting keywords for visuals...' });
-      const keywordsResult = await summarizeScriptAction({ script: scriptResult.script });
-      if (!keywordsResult.keywords) throw new Error('Keyword generation failed');
-      setKeywords(keywordsResult.keywords);
-      setCurrentKeywordsForDisplay(keywordsResult.keywords);
-      toast({ title: 'Keywords extracted!', description: `Keywords: ${keywordsResult.keywords}` });
+      // 2. Generate Multiple Images from scene prompts
+      const imagePrompts = currentScriptResult.scenes.map(scene => scene.imagePrompt);
+      if (imagePrompts.length === 0) throw new Error('No image prompts found in the script.');
 
-      // 3. Generate Multiple Images
-      toast({ title: 'Generating images with AI...', description: 'This might take a few moments for all images.' });
-      const imagesResult = await generateImagesAction({ prompt: keywordsResult.keywords, numberOfImages: 3 }); // Request 3 images
-      if (!imagesResult.imageUrls || imagesResult.imageUrls.length === 0) throw new Error('Image generation failed or returned no images');
+      toast({ title: `Generating ${imagePrompts.length} images with AI...`, description: 'This might take a few moments.' });
+      const imagesResult = await generateImagesAction({ prompts: imagePrompts });
+      if (!imagesResult.imageUrls || imagesResult.imageUrls.length === 0) {
+        throw new Error('Image generation failed or returned no images.');
+      }
       setGeneratedImages(imagesResult.imageUrls);
       toast({ title: `${imagesResult.imageUrls.length} Images generated successfully!` });
 
       // Prepare props for Remotion player/renderer
+      const concatenatedCaptions = currentScriptResult.scenes.map(scene => scene.contentText).join(' ');
+      const sceneTexts = currentScriptResult.scenes.map(scene => scene.contentText);
+
       const currentRemotionProps: CompositionProps = {
-        script: scriptResult.script,
+        title: currentScriptResult.title,
+        sceneTexts: sceneTexts, // Pass individual scene texts
         imageUris: imagesResult.imageUrls,
-        audioUri: '/placeholder-audio.mp3', // Main voiceover placeholder
-        musicUri: '/placeholder-music.mp3', // Background music placeholder
-        captions: scriptResult.script,
-        primaryColor: myVideoSchema.shape.primaryColor.parse(data.primaryColor || defaultPrimaryColor),
-        secondaryColor: myVideoSchema.shape.secondaryColor.parse(data.secondaryColor || defaultSecondaryColor),
+        audioUri: '/placeholder-audio.mp3',
+        musicUri: '/placeholder-music.mp3',
+        captions: concatenatedCaptions, // For overall accessibility or if needed by player
+        primaryColor: data.primaryColor || defaultPrimaryColor,
+        secondaryColor: data.secondaryColor || defaultSecondaryColor,
         fontFamily: data.fontFamily || defaultFontFamily,
         imageDurationInFrames: data.imageDurationInFrames || defaultImageDurationInFrames,
       };
       setRemotionProps(currentRemotionProps);
 
-      // Update player duration
-      const newPlayerDuration = currentRemotionProps.imageUris.length * currentRemotionProps.imageDurationInFrames;
+      const newPlayerDuration = imagesResult.imageUrls.length * (data.imageDurationInFrames || defaultImageDurationInFrames);
       setPlayerDuration(newPlayerDuration);
-
 
     } catch (error: any) {
       console.error('Video generation process failed:', error);
@@ -109,9 +103,7 @@ export default function GeneratePage() {
       await handleClientSideRender({
         compositionId: 'MyVideo',
         inputProps: remotionProps,
-        // Pass the dynamically calculated duration to the renderer
-        // Note: handleClientSideRender needs to be adapted if it doesn't accept duration override
-        // For now, assuming composition internally calculates its duration or uses a fixed one from its definition
+        // Duration is now handled by the composition internally or via playerDuration for preview
       });
       toast({ title: 'Video Rendered!', description: 'Your download should start automatically.' });
     } catch (error: any) {
@@ -121,7 +113,6 @@ export default function GeneratePage() {
       setIsRendering(false);
     }
   };
-
 
   return (
     <div className="space-y-8">
@@ -137,16 +128,15 @@ export default function GeneratePage() {
             <CardDescription>Describe your desired video.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Pass default values to VideoForm, it expects them in VideoFormValues format */}
             <VideoForm
               onSubmit={handleFormSubmit}
               isLoading={isLoading}
               defaultValues={{
-                topic: '', // Default topic or load from somewhere
-                style: '', // Default style
-                duration: '', // Default duration category
-                primaryColor: defaultPrimaryColor,
-                secondaryColor: defaultSecondaryColor,
+                topic: '',
+                style: 'cinematic',
+                duration: 'long', // Default to long to get more scenes
+                primaryColor: defaultPrimaryColor.toString(), // Ensure string for color input
+                secondaryColor: defaultSecondaryColor.toString(),
                 fontFamily: defaultFontFamily,
                 imageDurationInFrames: defaultImageDurationInFrames,
               }}
@@ -164,18 +154,19 @@ export default function GeneratePage() {
               <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px]">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-muted-foreground">Generating video assets... Please wait.</p>
+                <p className="text-sm text-muted-foreground mt-2">Script generation followed by image generation can take some time.</p>
               </div>
             )}
 
             {!isLoading && remotionProps && (
               <>
-                <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[320px] mx-auto" style={{ aspectRatio: '9/16', height: 'auto' }}> {/* Portrait aspect ratio for player */}
+                <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[320px] mx-auto" style={{ aspectRatio: '9/16', height: 'auto' }}>
                    <RemotionPlayer
                     compositionId="MyVideo"
                     inputProps={remotionProps}
                     controls
                     style={{ width: '100%', height: '100%' }}
-                    durationInFrames={playerDuration} // Use dynamic duration for the player
+                    durationInFrames={playerDuration}
                     loop
                   />
                 </div>
@@ -193,36 +184,50 @@ export default function GeneratePage() {
                  </div>
             )}
 
-            {script && (
-              <div className="p-4 border rounded-md bg-card">
-                <h3 className="font-semibold mb-2 font-headline">Generated Script:</h3>
-                <p className="text-sm whitespace-pre-wrap">{script}</p>
-              </div>
-            )}
-            {keywords && (
-              <div className="p-4 border rounded-md bg-card">
-                <h3 className="font-semibold mb-2 font-headline">Generated Keywords:</h3>
-                <p className="text-sm">{keywords}</p>
-              </div>
-            )}
-             {generatedImages && generatedImages.length > 0 && (
-              <div className="p-4 border rounded-md bg-card">
-                <h3 className="font-semibold mb-2 font-headline flex items-center">
-                  <ImageIcon className="mr-2 h-5 w-5 text-accent" />
-                  Generated Images ({generatedImages.length}):
-                </h3>
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {generatedImages.map((imgUrl, index) => (
-                    <img
-                      key={index}
-                      src={imgUrl}
-                      alt={`AI generated visual scene ${index + 1}`}
-                      className="rounded-md w-full h-auto object-contain shadow-lg aspect-[9/16]"
-                      data-ai-hint={currentKeywordsForDisplay || "generated image"}
-                    />
+            {scriptResult && (
+              <Card className="bg-card/70">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl font-headline flex items-center">
+                    <FileText className="mr-2 h-5 w-5 text-accent" />
+                    Generated Script: {scriptResult.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-3 max-h-96 overflow-y-auto">
+                  {scriptResult.scenes.map((scene, index) => (
+                    <div key={index} className="p-3 border rounded-md bg-background/50 shadow-sm">
+                      <h4 className="font-semibold text-primary">Scene {index + 1}</h4>
+                      <p className="mt-1"><strong className="font-medium text-muted-foreground">Visual:</strong> {scene.imagePrompt}</p>
+                      <p className="mt-1"><strong className="font-medium text-muted-foreground">Text:</strong> {scene.contentText}</p>
+                    </div>
                   ))}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+            )}
+
+             {generatedImages && generatedImages.length > 0 && (
+              <Card className="bg-card/70">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-xl font-headline flex items-center">
+                        <ImageIcon className="mr-2 h-5 w-5 text-accent" />
+                        Generated Images ({generatedImages.length})
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {generatedImages.map((imgUrl, index) => (
+                        <div key={index} className="relative aspect-[9/16] rounded-md overflow-hidden shadow-lg">
+                        <img
+                            src={imgUrl}
+                            alt={`AI generated visual scene ${index + 1}`}
+                            className="absolute inset-0 w-full h-full object-cover"
+                             data-ai-hint={scriptResult?.scenes[index]?.imagePrompt.substring(0,50) || "generated image"}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">Scene {index + 1}</div>
+                        </div>
+                    ))}
+                    </div>
+                </CardContent>
+              </Card>
             )}
           </CardContent>
         </Card>

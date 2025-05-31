@@ -4,32 +4,31 @@ import { MyVideoComposition, myVideoSchema, CompositionProps } from './MyVideo';
 
 // Register your compositions here
 export const RemotionRoot: React.FC = () => {
-  // Get default values from the schema itself
   const defaultPropsFromSchema = myVideoSchema.parse(undefined);
 
-  // Calculate a more dynamic default duration based on default props from schema
-  const defaultNumSlides = defaultPropsFromSchema.imageUris.length;
+  // Calculate default duration based on the number of default images/scenes and their duration
+  const defaultNumScenes = defaultPropsFromSchema.sceneTexts.length; // Or imageUris.length
   const defaultImageDuration = defaultPropsFromSchema.imageDurationInFrames;
-  const defaultCompositionDuration = defaultNumSlides * defaultImageDuration;
+  const defaultCompositionDuration = defaultNumScenes * defaultImageDuration;
 
   return (
     <>
       <Composition
         id="MyVideo"
         component={MyVideoComposition}
-        durationInFrames={defaultCompositionDuration} // Dynamic default duration
+        durationInFrames={defaultCompositionDuration} // Dynamic default based on default scenes
         fps={30}
         width={1080}
         height={1920} // Portrait format
         schema={myVideoSchema}
         defaultProps={{
-          ...defaultPropsFromSchema, // Spread all defaults from schema
-          // Override specific defaults if needed, e.g. for files that need staticFile
-          musicUri: staticFile('placeholder-music.mp3'), // Assuming you add this to public/
-          // audioUri: staticFile('placeholder-audio.mp3'), // Only if you want default audio
+          ...defaultPropsFromSchema,
+          // Explicitly set any file paths that need staticFile if they are part of defaults
+           audioUri: staticFile('placeholder-audio.mp3'), // Ensure this is in public/
+           musicUri: staticFile('placeholder-music.mp3'), // Ensure this is in public/
+           // imageUris are already defaulted with staticFile in the schema
         } satisfies CompositionProps}
       />
-      {/* Add more compositions here if needed */}
     </>
   );
 };

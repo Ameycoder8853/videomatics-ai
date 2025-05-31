@@ -2,81 +2,86 @@
 'use server';
 
 import { generateVideoScript as genVideoScriptFlow, GenerateVideoScriptInput, GenerateVideoScriptOutput } from '@/ai/flows/generate-video-script';
-import { summarizeScriptIntoKeywords as summarizeKeywordsFlow, SummarizeScriptInput, SummarizeScriptOutput } from '@/ai/flows/summarize-script-into-keywords';
-import { ai } from '@/ai/genkit'; // Import the global ai object
+// summarizeScriptIntoKeywords is no longer needed.
+import { ai } from '@/ai/genkit';
 
 // Action to generate video script
 export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
   try {
     const result = await genVideoScriptFlow(input);
-    if (!result || !result.script) {
-      throw new Error('AI failed to generate a script.');
+    if (!result || !result.title || !result.scenes || result.scenes.length === 0) {
+      throw new Error('AI failed to generate a structured script with title and scenes.');
     }
+    // Basic validation for scene content
+    result.scenes.forEach((scene, index) => {
+        if (!scene.imagePrompt || !scene.contentText) {
+            throw new Error(`Scene ${index + 1} is missing imagePrompt or contentText.`);
+        }
+    });
     return result;
   } catch (error: any) {
     console.error('Error in generateScriptAction:', error);
-    throw new Error(`Script generation failed: ${error.message}`);
+    // If it's a Genkit error with a message, use that, otherwise a generic one
+    const message = error.message || 'Script generation failed due to an unexpected error.';
+    throw new Error(`Script generation failed: ${message}`);
   }
 }
 
-// Action to summarize script into keywords
-export async function summarizeScriptAction(input: SummarizeScriptInput): Promise<SummarizeScriptOutput> {
-  try {
-    const result = await summarizeKeywordsFlow(input);
-     if (!result || !result.keywords) {
-      throw new Error('AI failed to generate keywords.');
-    }
-    return result;
-  } catch (error: any) {
-    console.error('Error in summarizeScriptAction:', error);
-    throw new Error(`Keyword summarization failed: ${error.message}`);
-  }
-}
+// summarizeScriptAction is removed.
 
-interface GenerateImagesInput { // Changed from GenerateImageInput
-  prompt: string;
-  numberOfImages?: number;
+interface GenerateImagesInput {
+  prompts: string[]; // Array of prompts, one for each image
 }
-interface GenerateImagesOutput { // Changed from GenerateImageOutput
+interface GenerateImagesOutput {
   imageUrls: string[]; // Will be an array of data URIs
 }
-export async function generateImagesAction(input: GenerateImagesInput): Promise<GenerateImagesOutput> { // Renamed to generateImagesAction
-  console.log('generateImagesAction called with prompt:', input.prompt, 'number of images:', input.numberOfImages);
-  const numberOfImagesToGenerate = input.numberOfImages || 3; // Default to 3 images
+export async function generateImagesAction(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
+  console.log('generateImagesAction called with', input.prompts.length, 'prompts.');
   const imageUrls: string[] = [];
 
+  if (input.prompts.length === 0) {
+    return { imageUrls: [] };
+  }
+
   try {
-    for (let i = 0; i < numberOfImagesToGenerate; i++) {
-      const imagePrompt = `${input.prompt} - scene ${i + 1}`; // Vary prompt slightly for each image
+    for (let i = 0; i < input.prompts.length; i++) {
+      const imagePrompt = input.prompts[i]; // Use the specific prompt for this image
+      console.log(`Generating image ${i + 1} with prompt: "${imagePrompt}"`);
       const {media} = await ai.generate({
         model: 'googleai/gemini-2.0-flash-exp',
-        prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: ${imagePrompt}. The image should be in portrait orientation (1080x1920). Ensure variety if multiple scenes are requested.`,
+        // The prompt from the script already specifies portrait, but we reinforce it.
+        prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: "${imagePrompt}". The image should be in portrait orientation (1080x1920).`,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
+           safetySettings: [ // Relax safety settings a bit for broader creative generation
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          ],
         },
       });
 
       if (!media || !media.url) {
-        console.warn(`AI failed to generate image for scene ${i + 1} or returned an invalid response.`);
-        // Optionally, add a placeholder or skip, for now, we'll skip if one fails.
-        // Or throw new Error(`AI failed to generate an image for scene ${i + 1}.`);
-        imageUrls.push('https://placehold.co/1080x1920.png?text=Image+Generation+Failed'); // Add a placeholder on failure
+        console.warn(`AI failed to generate image for prompt: "${imagePrompt}" or returned an invalid response.`);
+        imageUrls.push('https://placehold.co/1080x1920.png?text=Image+Gen+Failed'); // Add a placeholder on failure
       } else {
         imageUrls.push(media.url);
       }
     }
 
-    if (imageUrls.length === 0 && numberOfImagesToGenerate > 0) {
-        throw new Error('AI failed to generate any images.');
+    if (imageUrls.filter(url => !url.includes('placehold.co')).length === 0 && input.prompts.length > 0) {
+        // If all images failed for actual prompts
+        throw new Error('AI failed to generate any images successfully.');
     }
 
     return { imageUrls };
   } catch (error: any) {
     console.error('Error in generateImagesAction:', error);
-    if (error.message.includes('USER_LOCATION_INVALID')) {
+    if (error.message?.includes('USER_LOCATION_INVALID')) {
         throw new Error('Image generation is not available in your region.');
     }
-    if (error.message.includes('prompt was blocked')) {
+    if (error.message?.includes('prompt was blocked')) {
         throw new Error('Image generation failed because the prompt was blocked by safety settings.');
     }
     throw new Error(`Image generation failed: ${error.message || 'Unknown error'}`);
@@ -94,8 +99,10 @@ interface GenerateAudioOutput {
 }
 export async function generateAudioAction(input: GenerateAudioInput): Promise<GenerateAudioOutput> {
   console.log('Placeholder: generateAudioAction called with text length:', input.text.length);
+  // In a real app, you would call an API like ElevenLabs here using the API key from .env
+  // For example: process.env.ELEVENLABS_API_KEY
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-  return { audioUrl: `/placeholder-audio.mp3` };
+  return { audioUrl: `/placeholder-audio.mp3` }; // Return path to a file in public/
 }
 
 // Placeholder for Captions Generation Action (e.g., calling AssemblyAI)
@@ -108,9 +115,11 @@ interface GenerateCaptionsOutput {
 }
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
   console.log('Placeholder: generateCaptionsAction called with audio URL:', input.audioUrl);
+  // In a real app, you would call an API like AssemblyAI here using the API key from .env
+  // For example: process.env.ASSEMBLYAI_API_KEY
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
   return {
-    captionsUrl: `/placeholder-captions.srt`,
+    captionsUrl: `/placeholder-captions.srt`, // Return path to a file in public/
     transcript: 'This is a placeholder transcript for the provided audio.'
   };
 }

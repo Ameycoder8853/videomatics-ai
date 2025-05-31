@@ -3,34 +3,32 @@ import { Composition, AbsoluteFill, Sequence, Audio, staticFile, Img, useVideoCo
 import { z } from 'zod';
 import { zColor } from '@remotion/zod-types';
 
-// Helper to split script into sentences
+// Helper to split script into sentences (fallback if structured script isn't used)
 const splitScriptIntoSentences = (script: string): string[] => {
   if (!script) return [];
-  // Basic split by period, question mark, exclamation mark. Can be improved.
   const sentences = script.match(/[^.!?]+[.!?]+/g) || [script];
   return sentences.map(s => s.trim()).filter(s => s.length > 0);
 };
 
-// Define the schema for the props
 export const myVideoSchema = z.object({
-  script: z.string().default('Default script. This is a placeholder sentence. And another one for the slideshow! Even more text for a third slide.'),
+  title: z.string().default('My Awesome Video'),
+  sceneTexts: z.array(z.string()).default(['Welcome to this amazing video!', 'Let us explore something cool.', 'And conclude with a flourish!']),
   imageUris: z.array(z.string()).default([
     staticFile('images/placeholder-image1.png'),
     staticFile('images/placeholder-image2.png'),
     staticFile('images/placeholder-image3.png'),
   ]),
-  audioUri: z.string().optional(),
-  musicUri: z.string().optional(),
-  captions: z.string().optional().default('Placeholder captions.'),
-  primaryColor: zColor().default(zColor().parse('#111827')), // Darker background
-  secondaryColor: zColor().default(zColor().parse('#F3F4F6')), // Light text
+  audioUri: z.string().optional(), // For main voiceover
+  musicUri: z.string().optional(), // For background music
+  captions: z.string().optional().default('Placeholder captions for the whole video.'), // Overall captions
+  primaryColor: zColor().default('#1F2937'), // Dark grey-blue
+  secondaryColor: zColor().default('#F9FAFB'), // Very light grey / off-white
   fontFamily: z.string().default('Poppins, Inter, sans-serif'),
-  imageDurationInFrames: z.number().int().min(30).default(120), // Default to 4 seconds per image at 30 FPS
+  imageDurationInFrames: z.number().int().min(30).default(120), // 4 seconds at 30 FPS
 });
 
 export type CompositionProps = z.infer<typeof myVideoSchema>;
 
-// A component for displaying a single piece of animated text
 const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, animDurationInFrames: number }> = ({ text, color, fontFamily, animDurationInFrames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -38,36 +36,36 @@ const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, 
   const opacity = spring({
     frame,
     fps,
-    config: { stiffness: 80, damping: 30 },
-    durationInFrames: fps * 0.7, // Fade in for 0.7s
+    config: { stiffness: 100, damping: 20, mass: 0.8 },
+    durationInFrames: fps * 0.6,
   });
 
   const translateY = interpolate(
     frame,
-    [0, fps * 0.7, animDurationInFrames - fps * 0.7, animDurationInFrames],
-    [40, 0, 0, -40], // Slide in from bottom, slide out to top
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.25, 0.1, 0.25, 1)}
+    [0, fps * 0.6, animDurationInFrames - fps * 0.8, animDurationInFrames],
+    [50, 0, 0, -50],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.33, 1, 0.68, 1)}
   );
 
   return (
     <div
       style={{
         fontFamily,
-        fontSize: '52px',
+        fontSize: '48px', // Slightly smaller for potentially longer scene texts
         fontWeight: '600',
         color,
         textAlign: 'center',
-        padding: '20px 30px',
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        borderRadius: '12px',
+        padding: '25px 35px',
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        borderRadius: '10px',
         width: '90%',
-        maxWidth: '900px',
+        maxWidth: '800px', // Adjusted max width
         position: 'absolute',
-        bottom: '10%',
+        bottom: '12%', // Adjusted position
         left: '50%',
         transform: `translateX(-50%) translateY(${translateY}px)`,
         opacity,
-        textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+        textShadow: '1px 1px 3px rgba(0,0,0,0.7)',
       }}
     >
       {text}
@@ -76,64 +74,78 @@ const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, 
 };
 
 export const MyVideoComposition: React.FC<CompositionProps> = ({
-  script,
+  // title, // Title not directly used in composition visuals currently, but good for metadata
+  sceneTexts,
   imageUris,
   audioUri,
   musicUri,
+  // captions, // Captions prop is for overall accessibility, sceneTexts drive visuals
   primaryColor,
   secondaryColor,
   fontFamily,
   imageDurationInFrames,
 }) => {
   const { fps } = useVideoConfig();
-  const sentences = splitScriptIntoSentences(script);
 
+  // Ensure we always have some defaults if props are empty, though schema should handle this.
   const safeImageUris = imageUris && imageUris.length > 0 ? imageUris : [staticFile('images/placeholder-image1.png')];
-  const safeSentences = sentences.length > 0 ? sentences : ['Your amazing video content starts now!'];
+  const safeSceneTexts = sceneTexts && sceneTexts.length > 0 ? sceneTexts : ['Your video content.'];
 
-  // Calculate total duration based on images/sentences for the composition itself
-  // This ensures the composition is long enough for all its content.
-  const compositionTotalDuration = safeImageUris.length * imageDurationInFrames;
+  // Log resolved audio URIs for debugging
+  if (typeof window !== 'undefined') { // Only log in browser environment
+    console.log('MyVideoComposition Props:');
+    console.log('  audioUri (prop):', audioUri);
+    console.log('  musicUri (prop):', musicUri);
+    const resolvedAudio = audioUri && (audioUri.startsWith('/') ? staticFile(audioUri.substring(1)) : audioUri);
+    const resolvedMusic = musicUri && (musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri);
+    console.log('  Resolved Audio URI for <Audio>:', resolvedAudio);
+    console.log('  Resolved Music URI for <Audio>:', resolvedMusic);
+  }
 
 
   return (
     <AbsoluteFill style={{ backgroundColor: primaryColor.toString() }}>
-      {/* Background Music */}
-      {musicUri && <Audio src={musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri} volume={0.15} loop />}
+      {/* Background Music: Ensure file exists in public/ */}
+      {musicUri && <Audio src={musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri} volume={0.1} loop />}
 
-      {/* Voiceover */}
-      {audioUri && <Audio src={audioUri.startsWith('/') ? staticFile(audioUri.substring(1)) : audioUri} volume={0.8} />}
+      {/* Voiceover: Ensure file exists in public/ */}
+      {audioUri && <Audio src={audioUri.startsWith('/') ? staticFile(audioUri.substring(1)) : audioUri} volume={0.9} />}
 
-      {/* Slideshow of Images and Text */}
       {safeImageUris.map((imageSrc, index) => {
-        const sentenceForThisSlide = safeSentences[index % safeSentences.length]; // Cycle through sentences
+        const textForThisSlide = safeSceneTexts[index % safeSceneTexts.length]; // Cycle through scene texts
         const sequenceStartFrame = index * imageDurationInFrames;
 
-        // Image animation: Ken Burns effect (slow zoom and pan)
         const imageScale = spring({
           frame: useCurrentFrame() - sequenceStartFrame,
           fps,
-          from: 1,
-          to: 1.1, // Zoom in slightly
+          from: 1.05, // Start slightly zoomed in
+          to: 1.15,
           durationInFrames: imageDurationInFrames,
+          config: { stiffness: 30, damping: 20 }
         });
         const imageTranslateX = interpolate(
           useCurrentFrame() - sequenceStartFrame,
           [0, imageDurationInFrames],
-          [0, (index % 2 === 0 ? -20 : 20)], // Pan left or right
-          {easing: Easing.inOut(Easing.ease)}
+          [index % 2 === 0 ? -10 : 10, index % 2 === 0 ? 5 : -5], // Subtle pan
+          {easing: Easing.linear}
         );
          const imageTranslateY = interpolate(
           useCurrentFrame() - sequenceStartFrame,
           [0, imageDurationInFrames],
-          [0, (index % 3 === 0 ? -10 : 10)], // Pan up or down slightly
-          {easing: Easing.inOut(Easing.ease)}
+          [index % 3 === 0 ? -5 : 5, index % 3 === 0 ? 2 : -2], // Subtle pan
+          {easing: Easing.linear}
+        );
+        const imageOpacity = interpolate(
+          useCurrentFrame() - sequenceStartFrame,
+          [0, fps * 0.5, imageDurationInFrames - fps * 0.5, imageDurationInFrames],
+          [0, 1, 1, 0], // Fade in and out
+          { easing: Easing.inOut(Easing.ease) }
         );
 
 
         return (
           <Sequence key={`slide-${index}`} from={sequenceStartFrame} durationInFrames={imageDurationInFrames}>
-            <AbsoluteFill style={{ overflow: 'hidden' }}>
+            <AbsoluteFill style={{ overflow: 'hidden', opacity: imageOpacity }}>
               <Img
                 src={imageSrc.startsWith('/') ? staticFile(imageSrc.substring(1)) : imageSrc}
                 style={{
@@ -142,17 +154,16 @@ export const MyVideoComposition: React.FC<CompositionProps> = ({
                   objectFit: 'cover',
                   transform: `scale(${imageScale}) translateX(${imageTranslateX}px) translateY(${imageTranslateY}px)`,
                 }}
-                data-ai-hint={sentences[index % sentences.length] || "slideshow image"}
+                data-ai-hint={safeSceneTexts[index % safeSceneTexts.length]?.substring(0,30) || "slideshow image"}
               />
-               {/* Optional: Subtle vignette or overlay */}
-              <AbsoluteFill style={{ background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 100%)' }} />
+              <AbsoluteFill style={{ background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 100%)' }} />
             </AbsoluteFill>
             <AbsoluteFill style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <AnimatedText
-                text={sentenceForThisSlide}
+                text={textForThisSlide}
                 color={secondaryColor.toString()}
                 fontFamily={fontFamily}
-                animDurationInFrames={imageDurationInFrames - fps * 0.5} // Allow time for exit animation
+                animDurationInFrames={imageDurationInFrames - fps * 0.3} // Animation duration within the slide
               />
             </AbsoluteFill>
           </Sequence>
