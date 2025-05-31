@@ -61,7 +61,7 @@ export default function HomePage() {
       </div>
 
       <div className="space-y-4">
-        <Link href="/auth/signup" passHref>
+        <Link href="/signup" passHref>
           <Button size="lg" className="w-64 text-lg bg-primary hover:bg-primary/90 shadow-lg transform hover:scale-105 transition-transform">
             Get Started Free
             <PlayCircle className="ml-2 h-5 w-5" />
@@ -69,7 +69,7 @@ export default function HomePage() {
         </Link>
         <p className="text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link href="/auth/login" className="text-accent hover:underline font-medium">
+          <Link href="/login" className="text-accent hover:underline font-medium">
             Log In
           </Link>
         </p>

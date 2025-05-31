@@ -23,7 +23,7 @@ export function Navbar() {
   const handleLogout = async () => {
     try {
       await logOut();
-      router.push('/auth/login');
+      router.push('/login');
     } catch (error) {
       console.error('Failed to log out:', error);
       // Optionally show a toast notification for logout failure
@@ -91,7 +91,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link href="/auth/login" legacyBehavior passHref>
+            <Link href="/login" legacyBehavior passHref>
               <Button>Login</Button>
             </Link>
           )}
