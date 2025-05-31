@@ -6,15 +6,18 @@ import { VideoForm, type VideoFormValues } from '@/components/VideoForm';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Loader2, Play, Image as ImageIcon } from 'lucide-react'; // Added ImageIcon
-import { generateScriptAction, summarizeScriptAction, generateImageAction, generateAudioAction, generateCaptionsAction } from '@/app/actions'; // Server actions
+import { Download, Loader2, Play, Image as ImageIcon } from 'lucide-react';
+import { generateScriptAction, summarizeScriptAction, generateImageAction } from '@/app/actions'; // Removed unused audio/caption actions for now
 import { useToast } from '@/hooks/use-toast';
 import { handleClientSideRender } from '@/lib/remotion';
 import type { CompositionProps } from '@/remotion/MyVideo';
+import { staticFile } from 'remotion';
+
 
 interface GeneratedImageData { url: string; keywords: string; }
-interface GeneratedAudioData { url: string; } // Stays placeholder
-interface GeneratedCaptionData { url: string; content: string; } // Stays placeholder
+// Audio and Captions are placeholder for now, so their specific data structures are less critical
+// interface GeneratedAudioData { url: string; }
+// interface GeneratedCaptionData { url: string; content: string; }
 
 
 export default function GeneratePage() {
@@ -23,8 +26,8 @@ export default function GeneratePage() {
   const [script, setScript] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImageData | null>(null);
-  const [generatedAudio, setGeneratedAudio] = useState<GeneratedAudioData | null>(null); // Stays placeholder
-  const [generatedCaptions, setGeneratedCaptions] = useState<GeneratedCaptionData | null>(null); // Stays placeholder
+  // const [generatedAudio, setGeneratedAudio] = useState<GeneratedAudioData | null>(null);
+  // const [generatedCaptions, setGeneratedCaptions] = useState<GeneratedCaptionData | null>(null);
   
   const [isRendering, setIsRendering] = useState(false);
   const [remotionProps, setRemotionProps] = useState<CompositionProps | null>(null);
@@ -35,9 +38,15 @@ export default function GeneratePage() {
     setScript(null);
     setKeywords(null);
     setGeneratedImage(null);
-    setGeneratedAudio(null);
-    setGeneratedCaptions(null);
+    // setGeneratedAudio(null);
+    // setGeneratedCaptions(null);
     setRemotionProps(null);
+
+    // Define default theme values here, or get them from a context/config
+    const defaultPrimaryColor = '#673AB7'; // Example default
+    const defaultSecondaryColor = '#FFFFFF'; // Example default
+    const defaultFontFamily = 'Poppins, Inter, sans-serif'; // Example default
+    const defaultImageDurationInFrames = 90; // 3 seconds at 30 FPS
 
     try {
       // 1. Generate Script
@@ -54,40 +63,43 @@ export default function GeneratePage() {
       setKeywords(keywordsResult.keywords);
       toast({ title: 'Keywords extracted!', description: `Keywords: ${keywordsResult.keywords}` });
 
-      // 3. Generate Image
+      // 3. Generate Image (singular for now, will form an array later)
       toast({ title: 'Generating image with AI...', description: 'This might take a few moments.' });
       const imageResult = await generateImageAction({ prompt: keywordsResult.keywords });
       if (!imageResult.imageUrl) throw new Error('Image generation failed');
       setGeneratedImage({ url: imageResult.imageUrl, keywords: keywordsResult.keywords });
       toast({ title: 'Image generated successfully!' });
       
-      // 4. Placeholder for Audio Generation
-      toast({ title: 'Preparing audio (placeholder)...' });
-      // const audioResult = await generateAudioAction({ text: scriptResult.script }); // Kept as placeholder
-      // if (!audioResult.audioUrl) throw new Error('Audio generation failed');
-      // setGeneratedAudio({ url: audioResult.audioUrl });
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate work
-      setGeneratedAudio({ url: '/placeholder-audio.mp3' }); // Using placeholder
-      toast({ title: 'Audio ready (placeholder)!' });
+      // Placeholder for Audio Generation
+      // toast({ title: 'Preparing audio (placeholder)...' });
+      // await new Promise(resolve => setTimeout(resolve, 500)); 
+      // setGeneratedAudio({ url: '/placeholder-audio.mp3' }); 
+      // toast({ title: 'Audio ready (placeholder)!' });
 
-      // 5. Placeholder for Captions Generation
-      toast({ title: 'Preparing captions (placeholder)...' });
-      // const captionsResult = await generateCaptionsAction({ audioUrl: audioResult.audioUrl }); // Kept as placeholder
-      // if(!captionsResult.transcript) throw new Error('Captions generation failed');
-      // setGeneratedCaptions({ url: captionsResult.captionsUrl, content: captionsResult.transcript});
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate work
-      setGeneratedCaptions({ url: '/placeholder-captions.srt', content: 'This is a placeholder caption.' }); // Using placeholder
-      toast({ title: 'Captions ready (placeholder)!' });
+      // Placeholder for Captions Generation
+      // toast({ title: 'Preparing captions (placeholder)...' });
+      // await new Promise(resolve => setTimeout(resolve, 500)); 
+      // setGeneratedCaptions({ url: '/placeholder-captions.srt', content: 'This is a placeholder caption.' });
+      // toast({ title: 'Captions ready (placeholder)!' });
 
-      // 6. Prepare props for Remotion player/renderer
+      // Construct imageUris array for slideshow
+      const imageUrisForRemotion = [
+        imageResult.imageUrl, // The one generated image
+        'https://placehold.co/1080x1920.png?text=Scene+2', // Placeholder 2
+        'https://placehold.co/1080x1920.png?text=Scene+3'  // Placeholder 3
+      ];
+
+      // Prepare props for Remotion player/renderer
       setRemotionProps({
         script: scriptResult.script,
-        imageUri: imageResult.imageUrl, // Use REAL generated image URL
-        audioUri: '/placeholder-audio.mp3', // Use placeholder audio
-        captions: 'This is a placeholder caption.', // Use placeholder caption
-        primaryColor: '#673AB7', // Explicitly pass default primary color
-        secondaryColor: '#FFFFFF', // Explicitly pass default secondary color
-        fontFamily: 'Poppins, Inter, sans-serif', // Explicitly pass default font family
+        imageUris: imageUrisForRemotion,
+        audioUri: '/placeholder-audio.mp3', // Main voiceover placeholder
+        musicUri: '/placeholder-music.mp3', // Background music placeholder
+        captions: scriptResult.script, // Use full script for captions/dynamic text for now
+        primaryColor: defaultPrimaryColor,
+        secondaryColor: defaultSecondaryColor,
+        fontFamily: defaultFontFamily,
+        imageDurationInFrames: defaultImageDurationInFrames,
       });
 
     } catch (error: any) {
@@ -195,9 +207,10 @@ export default function GeneratePage() {
               <div className="p-4 border rounded-md bg-card">
                 <h3 className="font-semibold mb-2 font-headline flex items-center">
                   <ImageIcon className="mr-2 h-5 w-5 text-accent" />
-                  Generated Image:
+                  Generated Image (First of Slideshow):
                 </h3>
                 <div className="mt-2 flex justify-center">
+                  {/* Displaying the first image of the slideshow */}
                   <img 
                     src={generatedImage.url} 
                     alt="AI generated visual based on keywords" 

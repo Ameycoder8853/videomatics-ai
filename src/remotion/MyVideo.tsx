@@ -1,32 +1,67 @@
-import { Composition, AbsoluteFill, Sequence, Audio, staticFile, Img, useVideoConfig, useCurrentFrame } from 'remotion';
+
+import { Composition, AbsoluteFill, Sequence, Audio, staticFile, Img, useVideoConfig, useCurrentFrame, spring, interpolate, Easing } from 'remotion';
 import { z } from 'zod';
 import { zColor } from '@remotion/zod-types';
 
+// Helper to split script into sentences
+const splitScriptIntoSentences = (script: string): string[] => {
+  if (!script) return [];
+  // Basic split by period, question mark, exclamation mark. Can be improved.
+  const sentences = script.match(/[^.!?]+[.!?]+/g) || [script];
+  return sentences.map(s => s.trim()).filter(s => s.length > 0);
+};
+
 // Define the schema for the props
 export const myVideoSchema = z.object({
-  script: z.string().default('Default script text. This is a placeholder.'),
-  imageUri: z.string().default(staticFile('images/placeholder-image.png')), // Default to a local placeholder
+  script: z.string().default('Default script. This is a placeholder sentence. And another one for the slideshow!'),
+  imageUris: z.array(z.string()).default([staticFile('images/placeholder-image.png')]),
   audioUri: z.string().optional(),
-  captions: z.string().optional().default('Placeholder captions.'),
-  primaryColor: zColor().default('#673AB7'), // Deep Purple - Simplified default
-  secondaryColor: zColor().default('#FFFFFF'), // White - Simplified default
+  musicUri: z.string().optional(),
+  captions: z.string().optional().default('Placeholder captions if script is not used directly.'), // May deprecate if script is always used for text
+  primaryColor: zColor().default(zColor().parse('#673AB7')),
+  secondaryColor: zColor().default(zColor().parse('#FFFFFF')),
   fontFamily: z.string().default('Poppins, Inter, sans-serif'),
+  imageDurationInFrames: z.number().default(90), // Default to 3 seconds per image at 30 FPS
 });
 
 export type CompositionProps = z.infer<typeof myVideoSchema>;
 
-const Title: React.FC<{ text: string, color: string, fontFamily: string }> = ({ text, color, fontFamily }) => {
+// A component for displaying a single piece of animated text
+const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, animDurationInFrames: number }> = ({ text, color, fontFamily, animDurationInFrames }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const opacity = spring({
+    frame,
+    fps,
+    config: { stiffness: 50, damping: 200 },
+    durationInFrames: fps * 0.5, // Fade in for 0.5s
+  });
+
+  const translateY = interpolate(
+    frame,
+    [0, fps * 0.5, animDurationInFrames - fps * 0.5, animDurationInFrames],
+    [50, 0, 0, -50], // Slide in from bottom, slide out to top
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
+
   return (
     <div
       style={{
         fontFamily,
-        fontSize: '72px',
+        fontSize: '60px', // Adjusted for potentially longer text
         fontWeight: 'bold',
         color,
         textAlign: 'center',
-        padding: '20px',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        borderRadius: '10px',
+        padding: '30px',
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        borderRadius: '15px',
+        width: '90%',
+        position: 'absolute',
+        bottom: '15%', // Position text lower
+        left: '5%',
+        opacity,
+        transform: `translateY(${translateY}px)`,
       }}
     >
       {text}
@@ -34,74 +69,68 @@ const Title: React.FC<{ text: string, color: string, fontFamily: string }> = ({ 
   );
 };
 
-const CaptionsDisplay: React.FC<{ text: string, color: string, fontFamily: string }> = ({ text, color, fontFamily }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  // Simple animation for captions: appear word by word (very basic)
-  const words = text.split(' ');
-  const wordsToShow = Math.floor(frame / (fps / 2)); // Show a new word every 0.5 seconds approx.
-  
-  return (
-    <div
-      style={{
-        fontFamily,
-        fontSize: '48px',
-        color,
-        textAlign: 'center',
-        position: 'absolute',
-        bottom: '10%',
-        width: '90%',
-        left: '5%',
-        padding: '15px',
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        borderRadius: '8px',
-      }}
-    >
-      {words.slice(0, wordsToShow).join(' ')}
-    </div>
-  );
-};
-
-
 export const MyVideoComposition: React.FC<CompositionProps> = ({
   script,
-  imageUri,
+  imageUris,
   audioUri,
-  captions,
+  musicUri,
+  // captions, // Using script for dynamic text now
   primaryColor,
   secondaryColor,
   fontFamily,
+  imageDurationInFrames,
 }) => {
   const { fps, width, height } = useVideoConfig();
-  const durationInFrames = fps * 10; // Default 10 second video
+  const sentences = splitScriptIntoSentences(script);
+
+  // Ensure there's at least one image URI and one sentence for safety
+  const safeImageUris = imageUris.length > 0 ? imageUris : [staticFile('images/placeholder-image.png')];
+  const safeSentences = sentences.length > 0 ? sentences : ['Your amazing video content!'];
+
+  // Calculate total duration based on images/sentences
+  // Each image/sentence pair gets imageDurationInFrames
+  const totalDurationForSlideshow = Math.max(safeImageUris.length, safeSentences.length) * imageDurationInFrames;
+
 
   return (
     <AbsoluteFill style={{ backgroundColor: primaryColor.toString() }}>
-      {imageUri && (
-        <Img
-          src={imageUri.startsWith('/') ? staticFile(imageUri.substring(1)) : imageUri} // Handle local vs remote URLs
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
-          data-ai-hint="video background" // Generic hint
-        />
-      )}
+      {/* Background Music */}
+      {musicUri && <Audio src={musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri} volume={0.25} loop />}
       
-      <AbsoluteFill style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Sequence from={0} durationInFrames={durationInFrames}>
-          <Title text={script.substring(0, 50) + (script.length > 50 ? "..." : "")} color={secondaryColor.toString()} fontFamily={fontFamily} />
-        </Sequence>
-      </AbsoluteFill>
-
-      {captions && (
-        <Sequence from={fps * 1} durationInFrames={durationInFrames - fps * 1}>
-           <CaptionsDisplay text={captions} color={secondaryColor.toString()} fontFamily={fontFamily} />
-        </Sequence>
-      )}
-
+      {/* Voiceover */}
       {audioUri && <Audio src={audioUri.startsWith('/') ? staticFile(audioUri.substring(1)) : audioUri} />}
+
+      {/* Slideshow of Images and Text */}
+      {safeImageUris.map((imageSrc, index) => {
+        const sentenceForThisSlide = safeSentences[index % safeSentences.length]; // Cycle through sentences if fewer than images
+        const sequenceStartFrame = index * imageDurationInFrames;
+
+        return (
+          <Sequence key={`slide-${index}`} from={sequenceStartFrame} durationInFrames={imageDurationInFrames}>
+            <AbsoluteFill>
+              <Img
+                src={imageSrc.startsWith('/') ? staticFile(imageSrc.substring(1)) : imageSrc}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+                data-ai-hint="slideshow image" 
+              />
+            </AbsoluteFill>
+            <AbsoluteFill style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AnimatedText
+                text={sentenceForThisSlide}
+                color={secondaryColor.toString()}
+                fontFamily={fontFamily}
+                animDurationInFrames={imageDurationInFrames - fps * 0.5} // Allow time for exit animation
+              />
+            </AbsoluteFill>
+          </Sequence>
+        );
+      })}
     </AbsoluteFill>
   );
 };
+
+    
