@@ -42,7 +42,6 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
   }
 
   try {
-    // Generate up to a max of, say, 15 images to keep generation times reasonable
     const promptsToProcess = input.prompts.slice(0, 15);
 
     for (let i = 0; i < promptsToProcess.length; i++) {
@@ -84,8 +83,8 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
     if (errorMessage.includes('prompt was blocked')) {
         throw new Error('Image generation failed because the prompt was blocked by safety settings.');
     }
-    if (errorMessage.includes('429') || errorMessage.includes('quota exceeded') || errorMessage.includes('rate limit')) {
-        throw new Error('Image generation failed due to API rate limits (quota exceeded). Please try again in a minute or check your API plan.');
+    if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+        throw new Error('Image generation failed due to API rate limits or quota exceeded. Please wait a minute or check your API plan.');
     }
     throw new Error(`Image generation failed: ${error.message || 'Unknown error'}`);
   }
@@ -125,7 +124,7 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
-          style: 0.2, 
+          style: 0.2,
           use_speaker_boost: true
         },
       }),
@@ -146,9 +145,9 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
     try {
         const audioBlob = await response.blob();
         if (audioBlob.type !== 'audio/mpeg' && audioBlob.type !== 'audio/mp3') {
-            const responseText = await audioBlob.text(); // Try to get text if it's not audio
+            const responseText = await audioBlob.text(); 
             console.error('ElevenLabs did not return audio. Response:', responseText);
-            throw new Error(`ElevenLabs returned non-audio content: ${responseText.substring(0,100)}`);
+            throw new Error(`ElevenLabs returned non-audio content type: ${audioBlob.type}. Response text: ${responseText.substring(0,100)}`);
         }
         const buffer = await audioBlob.arrayBuffer();
         const base64Audio = Buffer.from(buffer).toString('base64');
@@ -168,21 +167,112 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
 }
 
 
-// Placeholder for Captions Generation Action (e.g., calling AssemblyAI)
 interface GenerateCaptionsInput {
-  audioUrl: string; // URL of the audio file to transcribe
+  audioDataUri: string; // Data URI of the audio file to transcribe
 }
 interface GenerateCaptionsOutput {
-  captionsUrl: string; // URL to the SRT/VTT file
   transcript: string; // Full transcript text
+  // srtCaptions?: string; // Optional: SRT format captions as a string or data URI
 }
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
-  console.log('Placeholder: generateCaptionsAction called with audio URL:', input.audioUrl);
-  // In a real app, you would call an API like AssemblyAI here using the API key from .env
-  // For example: process.env.ASSEMBLYAI_API_KEY
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-  return {
-    captionsUrl: `/placeholder-captions.srt`, // Return path to a file in public/
-    transcript: 'This is a placeholder transcript for the provided audio.'
-  };
+  const apiKey = process.env.ASSEMBLYAI_API_KEY;
+  if (!apiKey) {
+    console.error('AssemblyAI API key is not set in environment variables.');
+    throw new Error('AssemblyAI API key is missing. Cannot generate captions.');
+  }
+
+  console.log('Generating captions with AssemblyAI for audio data URI...');
+
+  try {
+    // 1. Convert Data URI to Blob
+    const fetchResponse = await fetch(input.audioDataUri);
+    if (!fetchResponse.ok) {
+      throw new Error(`Failed to fetch audio data URI: ${fetchResponse.statusText}`);
+    }
+    const audioBlob = await fetchResponse.blob();
+
+    // 2. Upload audio to AssemblyAI
+    const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
+      method: 'POST',
+      headers: {
+        'authorization': apiKey,
+        'Content-Type': audioBlob.type, // Or specific type like 'audio/mpeg'
+      },
+      body: audioBlob,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('AssemblyAI upload error:', uploadResponse.status, errorText);
+      throw new Error(`AssemblyAI audio upload failed with status ${uploadResponse.status}: ${errorText}`);
+    }
+    const uploadResult = await uploadResponse.json();
+    const audio_url = uploadResult.upload_url;
+    if (!audio_url) {
+      throw new Error('AssemblyAI did not return an upload URL.');
+    }
+    console.log('Audio uploaded to AssemblyAI:', audio_url);
+
+    // 3. Submit for transcription
+    const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
+      method: 'POST',
+      headers: {
+        'authorization': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ audio_url }),
+    });
+
+    if (!transcriptResponse.ok) {
+      const errorText = await transcriptResponse.text();
+      console.error('AssemblyAI transcription submission error:', transcriptResponse.status, errorText);
+      throw new Error(`AssemblyAI transcription submission failed with status ${transcriptResponse.status}: ${errorText}`);
+    }
+    const transcriptSubmissionResult = await transcriptResponse.json();
+    const transcriptId = transcriptSubmissionResult.id;
+    if (!transcriptId) {
+      throw new Error('AssemblyAI did not return a transcript ID.');
+    }
+    console.log('Transcription submitted to AssemblyAI, ID:', transcriptId);
+
+    // 4. Poll for completion
+    let attempts = 0;
+    const maxAttempts = 30; // Poll for up to 5 minutes (30 attempts * 10s delay)
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      await delay(10000); // Wait 10 seconds
+      console.log(`Polling AssemblyAI transcript status (attempt ${attempts})...`);
+      const pollResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+        headers: { 'authorization': apiKey },
+      });
+      if (!pollResponse.ok) {
+        const errorText = await pollResponse.text();
+        // Don't throw here immediately, could be a transient issue or just not ready
+        console.warn(`AssemblyAI polling error: ${pollResponse.status}: ${errorText}`);
+        continue; // Try again
+      }
+      const pollResult = await pollResponse.json();
+
+      if (pollResult.status === 'completed') {
+        console.log('AssemblyAI transcription completed.');
+        if (!pollResult.text) {
+            throw new Error('AssemblyAI transcription completed but returned no text.');
+        }
+        return { transcript: pollResult.text };
+      } else if (pollResult.status === 'failed' || pollResult.status === 'error') {
+        console.error('AssemblyAI transcription failed:', pollResult.error || 'Unknown error');
+        throw new Error(`AssemblyAI transcription failed: ${pollResult.error || 'Unknown error'}`);
+      }
+      // If status is 'queued' or 'processing', continue polling
+      console.log('AssemblyAI transcription status:', pollResult.status);
+    }
+
+    throw new Error('AssemblyAI transcription timed out after several attempts.');
+
+  } catch (error: any) {
+    console.error('Error in generateCaptionsAction (AssemblyAI):', error);
+    throw new Error(`Caption generation failed: ${error.message || 'Unknown error contacting AssemblyAI'}`);
+  }
 }

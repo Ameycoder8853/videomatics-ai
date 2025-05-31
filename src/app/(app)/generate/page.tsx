@@ -6,8 +6,8 @@ import { VideoForm, type VideoFormValues } from '@/components/VideoForm';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Loader2, Play, Image as ImageIcon, FileText, Palette, TypeIcon, ClockIcon, Mic } from 'lucide-react';
-import { generateScriptAction, generateImagesAction, generateAudioAction } from '@/app/actions';
+import { Download, Loader2, Play, Image as ImageIcon, FileText, Palette, TypeIcon, ClockIcon, Mic, FileWarning, Film } from 'lucide-react';
+import { generateScriptAction, generateImagesAction, generateAudioAction, generateCaptionsAction } from '@/app/actions';
 import type { GenerateVideoScriptOutput, Scene } from '@/ai/flows/generate-video-script';
 import { useToast } from '@/hooks/use-toast';
 import { handleClientSideRender } from '@/lib/remotion';
@@ -17,9 +17,11 @@ import { myVideoSchema } from '@/remotion/MyVideo';
 export default function GeneratePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState('');
   const [scriptResult, setScriptResult] = useState<GenerateVideoScriptOutput | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[] | null>(null);
   const [generatedAudioUri, setGeneratedAudioUri] = useState<string | null>(null);
+  const [generatedCaptions, setGeneratedCaptions] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [remotionProps, setRemotionProps] = useState<CompositionProps | null>(null);
   const [playerDuration, setPlayerDuration] = useState<number>(300); // Default player duration
@@ -34,71 +36,96 @@ export default function GeneratePage() {
     setScriptResult(null);
     setGeneratedImages(null);
     setGeneratedAudioUri(null);
+    setGeneratedCaptions(null);
     setRemotionProps(null);
-    const estimatedInitialDuration = 10 * (data.imageDurationInFrames || defaultImageDurationInFrames); // Estimate based on up to 10 scenes initially
-    setPlayerDuration(estimatedInitialDuration);
+    // Estimate duration based on up to 15 scenes (max for "long" duration)
+    const estimatedMaxScenes = 15;
+    const imageDurationInFrames = data.imageDurationInFrames || defaultImageDurationInFrames;
+    setPlayerDuration(estimatedMaxScenes * imageDurationInFrames);
+
+    let currentScript: GenerateVideoScriptOutput | null = null;
+    let currentImageUrls: string[] = [];
+    let currentAudioUri: string | null = null;
+    let currentCaptions: string | null = null;
 
     try {
       // 1. Generate Script
+      setLoadingStep('Generating script...');
       toast({ title: 'Generating script...', description: 'AI is crafting your narrative and visual cues.' });
-      const imageDurationInSeconds = Math.round((data.imageDurationInFrames || defaultImageDurationInFrames) / 30); // Assuming 30 FPS
+      const imageDurationInSeconds = Math.round(imageDurationInFrames / 30); // Assuming 30 FPS
 
-      const currentScriptResult = await generateScriptAction({
+      currentScript = await generateScriptAction({
         topic: data.topic,
         style: data.style,
         duration: data.duration,
         imageDurationInSeconds,
       });
 
-      if (!currentScriptResult || !currentScriptResult.scenes || currentScriptResult.scenes.length === 0) {
+      if (!currentScript || !currentScript.scenes || currentScript.scenes.length === 0) {
         throw new Error('Script generation failed or returned no scenes.');
       }
-      setScriptResult(currentScriptResult);
-      toast({ title: 'Script generated!', description: `"${currentScriptResult.title}" with ${currentScriptResult.scenes.length} scenes.` });
+      setScriptResult(currentScript);
+      toast({ title: 'Script generated!', description: `"${currentScript.title}" with ${currentScript.scenes.length} scenes.` });
 
       // 2. Generate Multiple Images from scene prompts
-      const imagePrompts = currentScriptResult.scenes.map(scene => scene.imagePrompt);
+      const imagePrompts = currentScript.scenes.map(scene => scene.imagePrompt);
       if (imagePrompts.length === 0) throw new Error('No image prompts found in the script.');
 
+      setLoadingStep(`Generating ${imagePrompts.length} images...`);
       toast({ title: `Generating ${imagePrompts.length} images...`, description: 'This might take a few moments.' });
       const imagesResult = await generateImagesAction({ prompts: imagePrompts });
       if (!imagesResult.imageUrls || imagesResult.imageUrls.length === 0) {
         throw new Error('Image generation failed or returned no images.');
       }
-      setGeneratedImages(imagesResult.imageUrls);
-      toast({ title: `${imagesResult.imageUrls.length} Images generated successfully!` });
+      currentImageUrls = imagesResult.imageUrls;
+      setGeneratedImages(currentImageUrls);
+      toast({ title: `${currentImageUrls.length} Images generated successfully!` });
       
       // 3. Generate Audio from script
-      const fullScriptText = currentScriptResult.scenes.map(scene => scene.contentText).join(' ');
+      const fullScriptText = currentScript.scenes.map(scene => scene.contentText).join(' ');
       if (!fullScriptText.trim()) throw new Error('Script content is empty, cannot generate audio.');
 
+      setLoadingStep('Generating voiceover audio...');
       toast({ title: 'Generating voiceover audio...', description: 'Using ElevenLabs for narration.' });
       const audioResult = await generateAudioAction({ text: fullScriptText });
       if (!audioResult.audioUrl) {
         throw new Error('Audio generation failed or returned no audio URL.');
       }
-      setGeneratedAudioUri(audioResult.audioUrl);
+      currentAudioUri = audioResult.audioUrl;
+      setGeneratedAudioUri(currentAudioUri);
       toast({ title: 'Voiceover audio generated!' });
 
+      // 4. Generate Captions from audio
+      setLoadingStep('Generating captions...');
+      toast({ title: 'Generating captions...', description: 'Using AssemblyAI for transcription.' });
+      const captionsResult = await generateCaptionsAction({ audioDataUri: currentAudioUri });
+      if (!captionsResult.transcript) {
+        throw new Error('Caption generation failed or returned no transcript.');
+      }
+      currentCaptions = captionsResult.transcript;
+      setGeneratedCaptions(currentCaptions);
+      toast({ title: 'Captions generated!' });
+
+
       // Prepare props for Remotion player/renderer
-      const sceneTexts = currentScriptResult.scenes.map(scene => scene.contentText);
+      const sceneTexts = currentScript.scenes.map(scene => scene.contentText);
 
       const currentRemotionProps: CompositionProps = {
-        title: currentScriptResult.title,
+        title: currentScript.title,
         sceneTexts: sceneTexts,
-        imageUris: imagesResult.imageUrls,
-        audioUri: audioResult.audioUrl, 
+        imageUris: currentImageUrls,
+        audioUri: currentAudioUri, 
         musicUri: '/placeholder-music.mp3', 
-        captions: fullScriptText, // This could be improved later with per-scene captions
+        captions: currentCaptions,
         primaryColor: data.primaryColor || defaultPrimaryColor,
         secondaryColor: data.secondaryColor || defaultSecondaryColor,
         fontFamily: data.fontFamily || defaultFontFamily,
-        imageDurationInFrames: data.imageDurationInFrames || defaultImageDurationInFrames,
+        imageDurationInFrames: imageDurationInFrames,
       };
       setRemotionProps(currentRemotionProps);
 
       // Calculate player duration based on the actual number of generated images/scenes
-      const newPlayerDuration = currentScriptResult.scenes.length * (data.imageDurationInFrames || defaultImageDurationInFrames);
+      const newPlayerDuration = currentScript.scenes.length * imageDurationInFrames;
       setPlayerDuration(newPlayerDuration);
 
     } catch (error: any) {
@@ -108,8 +135,10 @@ export default function GeneratePage() {
         description: error.message || 'An error occurred during the generation process.',
         variant: 'destructive',
       });
+       setRemotionProps(null); // Clear props on error to hide player
     } finally {
       setIsLoading(false);
+      setLoadingStep('');
     }
   };
 
@@ -154,11 +183,11 @@ export default function GeneratePage() {
               defaultValues={{
                 topic: 'A short interesting historical story',
                 style: 'cinematic',
-                duration: 'long', // Requesting more scenes
+                duration: 'long', 
                 primaryColor: defaultPrimaryColor.toString(),
                 secondaryColor: defaultSecondaryColor.toString(),
                 fontFamily: defaultFontFamily,
-                imageDurationInFrames: defaultImageDurationInFrames, // Default is 120 frames (4s)
+                imageDurationInFrames: defaultImageDurationInFrames,
               }}
             />
           </CardContent>
@@ -173,8 +202,8 @@ export default function GeneratePage() {
             {isLoading && (
               <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px]">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Generating video assets... Please wait.</p>
-                <p className="text-sm text-muted-foreground mt-2">Script, images, and audio generation can take some time.</p>
+                <p className="text-muted-foreground font-semibold">{loadingStep || 'Generating video assets...'}</p>
+                <p className="text-sm text-muted-foreground mt-2">Script, images, audio, and captions generation can take some time.</p>
               </div>
             )}
 
@@ -187,7 +216,8 @@ export default function GeneratePage() {
                     inputProps={remotionProps}
                     controls
                     style={{ width: '100%', height: '100%' }}
-                    durationInFrames={playerDuration}
+                    durationInFrames={playerDuration} // Use dynamic duration
+                    fps={30} // Standard FPS
                     loop
                   />
                 </div>
@@ -198,12 +228,22 @@ export default function GeneratePage() {
               </>
             )}
 
-            {!isLoading && !remotionProps && (
+            {!isLoading && !remotionProps && !scriptResult && ( // Initial empty state
                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px] bg-muted/50">
-                    <Play className="h-16 w-16 text-muted-foreground mb-4" />
+                    <Film className="h-16 w-16 text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">Your video preview will appear here once generated.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Fill the form and click "Generate Video Content".</p>
                  </div>
             )}
+
+            {!isLoading && !remotionProps && scriptResult && ( // Error state or cleared props
+                 <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px] bg-destructive/10 text-destructive-foreground">
+                    <FileWarning className="h-16 w-16 mb-4" />
+                    <p className="font-semibold">Preview Unavailable</p>
+                    <p className="text-sm mt-1">Video assets might have failed to generate. Check results below.</p>
+                 </div>
+            )}
+
 
             {scriptResult && (
               <Card className="bg-card/70">
@@ -213,7 +253,7 @@ export default function GeneratePage() {
                     Generated Script: {scriptResult.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm space-y-3 max-h-96 overflow-y-auto">
+                <CardContent className="text-sm space-y-3 max-h-60 overflow-y-auto">
                   {scriptResult.scenes.map((scene, index) => (
                     <div key={index} className="p-3 border rounded-md bg-background/50 shadow-sm">
                       <h4 className="font-semibold text-primary">Scene {index + 1}</h4>
@@ -255,7 +295,7 @@ export default function GeneratePage() {
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xl font-headline flex items-center">
                             <Mic className="mr-2 h-5 w-5 text-accent" />
-                            Generated Audio
+                            Generated Voiceover
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -263,6 +303,20 @@ export default function GeneratePage() {
                             Your browser does not support the audio element.
                         </audio>
                         <p className="text-xs text-muted-foreground mt-2">Voiceover generated by ElevenLabs.</p>
+                    </CardContent>
+                </Card>
+            )}
+             {generatedCaptions && (
+                <Card className="bg-card/70">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xl font-headline flex items-center">
+                            <TypeIcon className="mr-2 h-5 w-5 text-accent" />
+                            Generated Transcript
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm max-h-40 overflow-y-auto">
+                        <p className="whitespace-pre-wrap">{generatedCaptions}</p>
+                        <p className="text-xs text-muted-foreground mt-2">Transcript generated by AssemblyAI.</p>
                     </CardContent>
                 </Card>
             )}
