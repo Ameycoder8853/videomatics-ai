@@ -33,35 +33,46 @@ export async function summarizeScriptAction(input: SummarizeScriptInput): Promis
   }
 }
 
-interface GenerateImageInput {
+interface GenerateImagesInput { // Changed from GenerateImageInput
   prompt: string;
+  numberOfImages?: number;
 }
-interface GenerateImageOutput {
-  imageUrl: string; // Will be a data URI
+interface GenerateImagesOutput { // Changed from GenerateImageOutput
+  imageUrls: string[]; // Will be an array of data URIs
 }
-export async function generateImageAction(input: GenerateImageInput): Promise<GenerateImageOutput> {
-  console.log('generateImageAction called with prompt:', input.prompt);
-  try {
-    const {media} = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-exp', // Use the specified image generation model
-      prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: ${input.prompt}. The image should be in portrait orientation (1080x1920).`,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'], // Must provide both
-        // You might want to adjust safety settings if needed, but defaults are often fine.
-        // safetySettings: [{ category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE'}]
-      },
-      // Explicitly ask for a certain aspect ratio if the model supports it through prompt or config.
-      // For Gemini, often prompting for "portrait aspect ratio" or "1080x1920" helps.
-    });
+export async function generateImagesAction(input: GenerateImagesInput): Promise<GenerateImagesOutput> { // Renamed to generateImagesAction
+  console.log('generateImagesAction called with prompt:', input.prompt, 'number of images:', input.numberOfImages);
+  const numberOfImagesToGenerate = input.numberOfImages || 3; // Default to 3 images
+  const imageUrls: string[] = [];
 
-    if (!media || !media.url) {
-      throw new Error('AI failed to generate an image or returned an invalid response.');
+  try {
+    for (let i = 0; i < numberOfImagesToGenerate; i++) {
+      const imagePrompt = `${input.prompt} - scene ${i + 1}`; // Vary prompt slightly for each image
+      const {media} = await ai.generate({
+        model: 'googleai/gemini-2.0-flash-exp',
+        prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: ${imagePrompt}. The image should be in portrait orientation (1080x1920). Ensure variety if multiple scenes are requested.`,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE'],
+        },
+      });
+
+      if (!media || !media.url) {
+        console.warn(`AI failed to generate image for scene ${i + 1} or returned an invalid response.`);
+        // Optionally, add a placeholder or skip, for now, we'll skip if one fails.
+        // Or throw new Error(`AI failed to generate an image for scene ${i + 1}.`);
+        imageUrls.push('https://placehold.co/1080x1920.png?text=Image+Generation+Failed'); // Add a placeholder on failure
+      } else {
+        imageUrls.push(media.url);
+      }
     }
-    // The media.url will be a data URI like "data:image/png;base64,..."
-    return { imageUrl: media.url };
+
+    if (imageUrls.length === 0 && numberOfImagesToGenerate > 0) {
+        throw new Error('AI failed to generate any images.');
+    }
+
+    return { imageUrls };
   } catch (error: any) {
-    console.error('Error in generateImageAction:', error);
-    // Check for specific Genkit or API errors if possible
+    console.error('Error in generateImagesAction:', error);
     if (error.message.includes('USER_LOCATION_INVALID')) {
         throw new Error('Image generation is not available in your region.');
     }
@@ -98,8 +109,8 @@ interface GenerateCaptionsOutput {
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
   console.log('Placeholder: generateCaptionsAction called with audio URL:', input.audioUrl);
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-  return { 
+  return {
     captionsUrl: `/placeholder-captions.srt`,
-    transcript: 'This is a placeholder transcript for the provided audio.' 
+    transcript: 'This is a placeholder transcript for the provided audio.'
   };
 }
