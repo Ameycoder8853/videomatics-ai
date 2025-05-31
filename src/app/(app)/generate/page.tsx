@@ -1,20 +1,20 @@
+
 'use client';
 
 import { useState } from 'react';
 import { VideoForm, type VideoFormValues } from '@/components/VideoForm';
-import { RemotionPlayer } from '@/components/RemotionPlayer'; // Assuming this component will be created
+import { RemotionPlayer } from '@/components/RemotionPlayer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Loader2, Play } from 'lucide-react';
-import { generateScriptAction, summarizeScriptAction } from '@/app/actions'; // Server actions
+import { Download, Loader2, Play, Image as ImageIcon } from 'lucide-react'; // Added ImageIcon
+import { generateScriptAction, summarizeScriptAction, generateImageAction, generateAudioAction, generateCaptionsAction } from '@/app/actions'; // Server actions
 import { useToast } from '@/hooks/use-toast';
-import { handleClientSideRender } from '@/lib/remotion'; // Client-side render function
-import type { CompositionProps } from '@/remotion/MyVideo'; // Import MyVideoProps
+import { handleClientSideRender } from '@/lib/remotion';
+import type { CompositionProps } from '@/remotion/MyVideo';
 
-// Placeholder data types for other AI generation steps
 interface GeneratedImageData { url: string; keywords: string; }
-interface GeneratedAudioData { url: string; }
-interface GeneratedCaptionData { url: string; content: string; }
+interface GeneratedAudioData { url: string; } // Stays placeholder
+interface GeneratedCaptionData { url: string; content: string; } // Stays placeholder
 
 
 export default function GeneratePage() {
@@ -23,8 +23,8 @@ export default function GeneratePage() {
   const [script, setScript] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImageData | null>(null);
-  const [generatedAudio, setGeneratedAudio] = useState<GeneratedAudioData | null>(null);
-  const [generatedCaptions, setGeneratedCaptions] = useState<GeneratedCaptionData | null>(null);
+  const [generatedAudio, setGeneratedAudio] = useState<GeneratedAudioData | null>(null); // Stays placeholder
+  const [generatedCaptions, setGeneratedCaptions] = useState<GeneratedCaptionData | null>(null); // Stays placeholder
   
   const [isRendering, setIsRendering] = useState(false);
   const [remotionProps, setRemotionProps] = useState<CompositionProps | null>(null);
@@ -41,48 +41,48 @@ export default function GeneratePage() {
 
     try {
       // 1. Generate Script
-      toast({ title: 'Generating script...', description: 'Hang tight, AI is working its magic.' });
+      toast({ title: 'Generating script...', description: 'Hang tight, AI is crafting your narrative.' });
       const scriptResult = await generateScriptAction({ topic: data.topic, style: data.style, duration: data.duration });
       if (!scriptResult.script) throw new Error('Script generation failed');
       setScript(scriptResult.script);
       toast({ title: 'Script generated!', variant: 'default' });
 
       // 2. Summarize Script into Keywords (for image generation)
-      toast({ title: 'Generating keywords for images...' });
+      toast({ title: 'Extracting keywords for visuals...' });
       const keywordsResult = await summarizeScriptAction({ script: scriptResult.script });
       if (!keywordsResult.keywords) throw new Error('Keyword generation failed');
       setKeywords(keywordsResult.keywords);
-      toast({ title: 'Keywords generated!', description: `Keywords: ${keywordsResult.keywords}` });
+      toast({ title: 'Keywords extracted!', description: `Keywords: ${keywordsResult.keywords}` });
 
-      // Placeholder for Image Generation
-      // TODO: Implement actual image generation call (e.g., using Replicate)
-      // For now, using a placeholder image and the generated keywords
-      toast({ title: 'Generating image (placeholder)...' });
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const placeholderImageUrl = `https://placehold.co/1080x1920.png`; // Placeholder for SDXL image
-      setGeneratedImage({ url: placeholderImageUrl, keywords: keywordsResult.keywords });
-      toast({ title: 'Image generated (placeholder)!' });
+      // 3. Generate Image
+      toast({ title: 'Generating image with AI...', description: 'This might take a few moments.' });
+      const imageResult = await generateImageAction({ prompt: keywordsResult.keywords });
+      if (!imageResult.imageUrl) throw new Error('Image generation failed');
+      setGeneratedImage({ url: imageResult.imageUrl, keywords: keywordsResult.keywords });
+      toast({ title: 'Image generated successfully!' });
       
-      // Placeholder for Audio Generation
-      // TODO: Implement actual audio generation (e.g., ElevenLabs)
-      toast({ title: 'Generating audio (placeholder)...' });
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // In a real scenario, you'd upload a silent audio or generated audio and get a URL
-      setGeneratedAudio({ url: '/placeholder-audio.mp3' }); // This needs to be a valid path or URL
-      toast({ title: 'Audio generated (placeholder)!' });
+      // 4. Placeholder for Audio Generation
+      toast({ title: 'Preparing audio (placeholder)...' });
+      // const audioResult = await generateAudioAction({ text: scriptResult.script }); // Kept as placeholder
+      // if (!audioResult.audioUrl) throw new Error('Audio generation failed');
+      // setGeneratedAudio({ url: audioResult.audioUrl });
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate work
+      setGeneratedAudio({ url: '/placeholder-audio.mp3' }); // Using placeholder
+      toast({ title: 'Audio ready (placeholder)!' });
 
-      // Placeholder for Captions Generation
-      // TODO: Implement actual captions generation (e.g., AssemblyAI)
-      toast({ title: 'Generating captions (placeholder)...' });
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setGeneratedCaptions({ url: '/placeholder-captions.srt', content: 'This is a placeholder caption.' });
-      toast({ title: 'Captions generated (placeholder)!' });
+      // 5. Placeholder for Captions Generation
+      toast({ title: 'Preparing captions (placeholder)...' });
+      // const captionsResult = await generateCaptionsAction({ audioUrl: audioResult.audioUrl }); // Kept as placeholder
+      // if(!captionsResult.transcript) throw new Error('Captions generation failed');
+      // setGeneratedCaptions({ url: captionsResult.captionsUrl, content: captionsResult.transcript});
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate work
+      setGeneratedCaptions({ url: '/placeholder-captions.srt', content: 'This is a placeholder caption.' }); // Using placeholder
+      toast({ title: 'Captions ready (placeholder)!' });
 
-      // Prepare props for Remotion player/renderer
+      // 6. Prepare props for Remotion player/renderer
       setRemotionProps({
         script: scriptResult.script,
-        imageUri: placeholderImageUrl, // Use placeholder image
+        imageUri: imageResult.imageUrl, // Use REAL generated image URL
         audioUri: '/placeholder-audio.mp3', // Use placeholder audio
         captions: 'This is a placeholder caption.', // Use placeholder caption
       });
@@ -108,9 +108,8 @@ export default function GeneratePage() {
     toast({ title: 'Rendering video...', description: 'This might take a moment.'});
     try {
       await handleClientSideRender({
-        compositionId: 'MyVideo', // Ensure this matches your Remotion composition ID
+        compositionId: 'MyVideo',
         inputProps: remotionProps,
-        // Other render options as needed
       });
       toast({ title: 'Video Rendered!', description: 'Your download should start automatically.' });
     } catch (error: any) {
@@ -157,9 +156,8 @@ export default function GeneratePage() {
               <>
                 <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner">
                    <RemotionPlayer
-                    compositionId="MyVideo" // Must match a registered composition
+                    compositionId="MyVideo"
                     inputProps={remotionProps}
-                    // Adjust controls, width, height as needed for your layout
                     controls
                     style={{ width: '100%', height: '100%' }}
                   />
@@ -192,8 +190,18 @@ export default function GeneratePage() {
             )}
              {generatedImage && (
               <div className="p-4 border rounded-md bg-card">
-                <h3 className="font-semibold mb-2 font-headline">Generated Image (Placeholder):</h3>
-                <img src={generatedImage.url} alt="Generated visual" className="rounded-md max-w-xs mx-auto" data-ai-hint={generatedImage.keywords}/>
+                <h3 className="font-semibold mb-2 font-headline flex items-center">
+                  <ImageIcon className="mr-2 h-5 w-5 text-accent" />
+                  Generated Image:
+                </h3>
+                <div className="mt-2 flex justify-center">
+                  <img 
+                    src={generatedImage.url} 
+                    alt="AI generated visual based on keywords" 
+                    className="rounded-md max-w-full md:max-w-md max-h-[400px] object-contain shadow-lg" 
+                    data-ai-hint={generatedImage.keywords}
+                  />
+                </div>
               </div>
             )}
           </CardContent>

@@ -1,7 +1,9 @@
+
 'use server';
 
 import { generateVideoScript as genVideoScriptFlow, GenerateVideoScriptInput, GenerateVideoScriptOutput } from '@/ai/flows/generate-video-script';
 import { summarizeScriptIntoKeywords as summarizeKeywordsFlow, SummarizeScriptInput, SummarizeScriptOutput } from '@/ai/flows/summarize-script-into-keywords';
+import { ai } from '@/ai/genkit'; // Import the global ai object
 
 // Action to generate video script
 export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
@@ -13,8 +15,6 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
     return result;
   } catch (error: any) {
     console.error('Error in generateScriptAction:', error);
-    // It's often better to re-throw a generic error or a structured error object
-    // to avoid leaking sensitive details to the client.
     throw new Error(`Script generation failed: ${error.message}`);
   }
 }
@@ -33,25 +33,43 @@ export async function summarizeScriptAction(input: SummarizeScriptInput): Promis
   }
 }
 
-// Placeholder for Image Generation Action (e.g., calling Replicate)
 interface GenerateImageInput {
-  prompt: string; // Typically keywords or a descriptive phrase
-  // Add other parameters Replicate might need, e.g., image_dimensions, num_outputs
+  prompt: string;
 }
 interface GenerateImageOutput {
-  imageUrl: string; // URL of the generated image
-  // Add other relevant output fields
+  imageUrl: string; // Will be a data URI
 }
 export async function generateImageAction(input: GenerateImageInput): Promise<GenerateImageOutput> {
-  console.log('Placeholder: generateImageAction called with prompt:', input.prompt);
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  // In a real app, you would call the Replicate API here
-  // For example: const response = await replicate.run("stability-ai/sdxl:...", { input: { prompt: input.prompt } });
-  // const imageUrl = response[0]; // Assuming Replicate returns an array of image URLs
+  console.log('generateImageAction called with prompt:', input.prompt);
+  try {
+    const {media} = await ai.generate({
+      model: 'googleai/gemini-2.0-flash-exp', // Use the specified image generation model
+      prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: ${input.prompt}. The image should be in portrait orientation (1080x1920).`,
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'], // Must provide both
+        // You might want to adjust safety settings if needed, but defaults are often fine.
+        // safetySettings: [{ category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE'}]
+      },
+      // Explicitly ask for a certain aspect ratio if the model supports it through prompt or config.
+      // For Gemini, often prompting for "portrait aspect ratio" or "1080x1920" helps.
+    });
 
-  // Placeholder response
-  return { imageUrl: `https://placehold.co/1080x1920.png?text=${encodeURIComponent(input.prompt.substring(0,30))}` };
+    if (!media || !media.url) {
+      throw new Error('AI failed to generate an image or returned an invalid response.');
+    }
+    // The media.url will be a data URI like "data:image/png;base64,..."
+    return { imageUrl: media.url };
+  } catch (error: any) {
+    console.error('Error in generateImageAction:', error);
+    // Check for specific Genkit or API errors if possible
+    if (error.message.includes('USER_LOCATION_INVALID')) {
+        throw new Error('Image generation is not available in your region.');
+    }
+    if (error.message.includes('prompt was blocked')) {
+        throw new Error('Image generation failed because the prompt was blocked by safety settings.');
+    }
+    throw new Error(`Image generation failed: ${error.message || 'Unknown error'}`);
+  }
 }
 
 
@@ -65,13 +83,8 @@ interface GenerateAudioOutput {
 }
 export async function generateAudioAction(input: GenerateAudioInput): Promise<GenerateAudioOutput> {
   console.log('Placeholder: generateAudioAction called with text length:', input.text.length);
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  // In a real app, call ElevenLabs API
-  // This would involve sending the text, receiving audio stream/file, saving to Firebase Storage, and returning the URL.
-  
-  // Placeholder response (in a real app, this URL would point to Firebase Storage)
-  return { audioUrl: `/placeholder-audio.mp3` }; // Ensure this file exists in /public for placeholder
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+  return { audioUrl: `/placeholder-audio.mp3` };
 }
 
 // Placeholder for Captions Generation Action (e.g., calling AssemblyAI)
@@ -84,13 +97,9 @@ interface GenerateCaptionsOutput {
 }
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
   console.log('Placeholder: generateCaptionsAction called with audio URL:', input.audioUrl);
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 2500));
-  // In a real app, submit audio to AssemblyAI, poll for results, save captions to Firebase Storage, return URL.
-
-  // Placeholder response
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
   return { 
-    captionsUrl: `/placeholder-captions.srt`, // Ensure this file exists in /public
-    transcript: 'This is a placeholder transcript for the provided audio. AssemblyAI would generate accurate captions.' 
+    captionsUrl: `/placeholder-captions.srt`,
+    transcript: 'This is a placeholder transcript for the provided audio.' 
   };
 }
