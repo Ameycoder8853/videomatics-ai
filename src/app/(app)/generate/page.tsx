@@ -85,6 +85,9 @@ export default function GeneratePage() {
         imageUri: imageResult.imageUrl, // Use REAL generated image URL
         audioUri: '/placeholder-audio.mp3', // Use placeholder audio
         captions: 'This is a placeholder caption.', // Use placeholder caption
+        primaryColor: '#673AB7', // Explicitly pass default primary color
+        secondaryColor: '#FFFFFF', // Explicitly pass default secondary color
+        fontFamily: 'Poppins, Inter, sans-serif', // Explicitly pass default font family
       });
 
     } catch (error: any) {
@@ -210,3 +213,5 @@ export default function GeneratePage() {
     </div>
   );
 }
+
+    
