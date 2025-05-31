@@ -1,7 +1,7 @@
 'use client';
 import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter }_ from 'next/navigation'; // Corrected import
+import { useRouter } from 'next/navigation'; // Corrected import
 import { Gem } from 'lucide-react';
 import Link from 'next/link';
 
