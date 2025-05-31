@@ -2,7 +2,6 @@
 'use server';
 
 import { generateVideoScript as genVideoScriptFlow, GenerateVideoScriptInput, GenerateVideoScriptOutput } from '@/ai/flows/generate-video-script';
-// summarizeScriptIntoKeywords is no longer needed.
 import { ai } from '@/ai/genkit';
 
 // Action to generate video script
@@ -21,19 +20,16 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
     return result;
   } catch (error: any) {
     console.error('Error in generateScriptAction:', error);
-    // If it's a Genkit error with a message, use that, otherwise a generic one
     const message = error.message || 'Script generation failed due to an unexpected error.';
     throw new Error(`Script generation failed: ${message}`);
   }
 }
 
-// summarizeScriptAction is removed.
-
 interface GenerateImagesInput {
-  prompts: string[]; // Array of prompts, one for each image
+  prompts: string[];
 }
 interface GenerateImagesOutput {
-  imageUrls: string[]; // Will be an array of data URIs
+  imageUrls: string[];
 }
 export async function generateImagesAction(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
   console.log('generateImagesAction called with', input.prompts.length, 'prompts.');
@@ -44,16 +40,18 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
   }
 
   try {
-    for (let i = 0; i < input.prompts.length; i++) {
-      const imagePrompt = input.prompts[i]; // Use the specific prompt for this image
+    // Generate up to a max of, say, 15 images to keep generation times reasonable
+    const promptsToProcess = input.prompts.slice(0, 15);
+
+    for (let i = 0; i < promptsToProcess.length; i++) {
+      const imagePrompt = promptsToProcess[i];
       console.log(`Generating image ${i + 1} with prompt: "${imagePrompt}"`);
       const {media} = await ai.generate({
         model: 'googleai/gemini-2.0-flash-exp',
-        // The prompt from the script already specifies portrait, but we reinforce it.
         prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: "${imagePrompt}". The image should be in portrait orientation (1080x1920).`,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
-           safetySettings: [ // Relax safety settings a bit for broader creative generation
+           safetySettings: [
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -64,14 +62,12 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
 
       if (!media || !media.url) {
         console.warn(`AI failed to generate image for prompt: "${imagePrompt}" or returned an invalid response.`);
-        imageUrls.push('https://placehold.co/1080x1920.png?text=Image+Gen+Failed'); // Add a placeholder on failure
+        imageUrls.push('https://placehold.co/1080x1920.png?text=Image+Gen+Failed');
       } else {
         imageUrls.push(media.url);
       }
     }
-
-    if (imageUrls.filter(url => !url.includes('placehold.co')).length === 0 && input.prompts.length > 0) {
-        // If all images failed for actual prompts
+     if (imageUrls.filter(url => !url.includes('placehold.co')).length === 0 && promptsToProcess.length > 0) {
         throw new Error('AI failed to generate any images successfully.');
     }
 
@@ -88,22 +84,66 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
   }
 }
 
-
-// Placeholder for Audio Generation Action (e.g., calling ElevenLabs)
 interface GenerateAudioInput {
-  text: string; // The script text to convert to speech
-  voiceId?: string; // Optional voice ID for ElevenLabs
+  text: string;
+  voiceId?: string;
 }
 interface GenerateAudioOutput {
-  audioUrl: string; // URL of the generated audio file
+  audioUrl: string; // This will be a data URI
 }
 export async function generateAudioAction(input: GenerateAudioInput): Promise<GenerateAudioOutput> {
-  console.log('Placeholder: generateAudioAction called with text length:', input.text.length);
-  // In a real app, you would call an API like ElevenLabs here using the API key from .env
-  // For example: process.env.ELEVENLABS_API_KEY
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-  return { audioUrl: `/placeholder-audio.mp3` }; // Return path to a file in public/
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    console.error('ElevenLabs API key is not set in environment variables.');
+    throw new Error('ElevenLabs API key is missing. Cannot generate audio.');
+  }
+
+  const voiceId = input.voiceId || '21m00Tcm4TlvDq8ikWAM'; // Default to "Rachel"
+  const modelId = 'eleven_multilingual_v2';
+  const ttsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+
+  console.log(`Generating audio with ElevenLabs for text: "${input.text.substring(0, 100)}..."`);
+
+  try {
+    const response = await fetch(ttsUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        text: input.text,
+        model_id: modelId,
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75, // Boost similarity a bit for consistency
+          style: 0.2, // Add a little style
+          use_speaker_boost: true
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('ElevenLabs API Error:', response.status, errorBody);
+      throw new Error(`ElevenLabs API request failed with status ${response.status}: ${errorBody}`);
+    }
+
+    const audioBlob = await response.blob();
+    const buffer = await audioBlob.arrayBuffer();
+    const base64Audio = Buffer.from(buffer).toString('base64');
+    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+    
+    console.log('Audio generated successfully from ElevenLabs.');
+    return { audioUrl };
+
+  } catch (error: any) {
+    console.error('Error in generateAudioAction (ElevenLabs):', error);
+    throw new Error(`Audio generation failed: ${error.message || 'Unknown error contacting ElevenLabs'}`);
+  }
 }
+
 
 // Placeholder for Captions Generation Action (e.g., calling AssemblyAI)
 interface GenerateCaptionsInput {

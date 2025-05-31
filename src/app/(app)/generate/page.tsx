@@ -6,8 +6,8 @@ import { VideoForm, type VideoFormValues } from '@/components/VideoForm';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Loader2, Play, Image as ImageIcon, FileText, Palette, TypeIcon, ClockIcon } from 'lucide-react';
-import { generateScriptAction, generateImagesAction } from '@/app/actions';
+import { Download, Loader2, Play, Image as ImageIcon, FileText, Palette, TypeIcon, ClockIcon, Mic } from 'lucide-react';
+import { generateScriptAction, generateImagesAction, generateAudioAction } from '@/app/actions';
 import type { GenerateVideoScriptOutput, Scene } from '@/ai/flows/generate-video-script';
 import { useToast } from '@/hooks/use-toast';
 import { handleClientSideRender } from '@/lib/remotion';
@@ -19,6 +19,7 @@ export default function GeneratePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [scriptResult, setScriptResult] = useState<GenerateVideoScriptOutput | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[] | null>(null);
+  const [generatedAudioUri, setGeneratedAudioUri] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [remotionProps, setRemotionProps] = useState<CompositionProps | null>(null);
   const [playerDuration, setPlayerDuration] = useState<number>(300); // Default player duration
@@ -32,8 +33,8 @@ export default function GeneratePage() {
     setIsLoading(true);
     setScriptResult(null);
     setGeneratedImages(null);
+    setGeneratedAudioUri(null);
     setRemotionProps(null);
-    // Estimate duration based on typical "long" script having ~10 scenes * default image duration
     const estimatedInitialDuration = 10 * (data.imageDurationInFrames || defaultImageDurationInFrames);
     setPlayerDuration(estimatedInitialDuration);
 
@@ -51,25 +52,36 @@ export default function GeneratePage() {
       const imagePrompts = currentScriptResult.scenes.map(scene => scene.imagePrompt);
       if (imagePrompts.length === 0) throw new Error('No image prompts found in the script.');
 
-      toast({ title: `Generating ${imagePrompts.length} images with AI...`, description: 'This might take a few moments.' });
+      toast({ title: `Generating ${imagePrompts.length} images...`, description: 'This might take a few moments.' });
       const imagesResult = await generateImagesAction({ prompts: imagePrompts });
       if (!imagesResult.imageUrls || imagesResult.imageUrls.length === 0) {
         throw new Error('Image generation failed or returned no images.');
       }
       setGeneratedImages(imagesResult.imageUrls);
       toast({ title: `${imagesResult.imageUrls.length} Images generated successfully!` });
+      
+      // 3. Generate Audio from script
+      const fullScriptText = currentScriptResult.scenes.map(scene => scene.contentText).join(' ');
+      if (!fullScriptText.trim()) throw new Error('Script content is empty, cannot generate audio.');
+
+      toast({ title: 'Generating voiceover audio...', description: 'Using ElevenLabs for narration.' });
+      const audioResult = await generateAudioAction({ text: fullScriptText });
+      if (!audioResult.audioUrl) {
+        throw new Error('Audio generation failed or returned no audio URL.');
+      }
+      setGeneratedAudioUri(audioResult.audioUrl);
+      toast({ title: 'Voiceover audio generated!' });
 
       // Prepare props for Remotion player/renderer
-      const concatenatedCaptions = currentScriptResult.scenes.map(scene => scene.contentText).join(' ');
       const sceneTexts = currentScriptResult.scenes.map(scene => scene.contentText);
 
       const currentRemotionProps: CompositionProps = {
         title: currentScriptResult.title,
-        sceneTexts: sceneTexts, // Pass individual scene texts
+        sceneTexts: sceneTexts,
         imageUris: imagesResult.imageUrls,
-        audioUri: '/placeholder-audio.mp3',
-        musicUri: '/placeholder-music.mp3',
-        captions: concatenatedCaptions, // For overall accessibility or if needed by player
+        audioUri: audioResult.audioUrl, // Use dynamically generated audio
+        musicUri: '/placeholder-music.mp3', // Keep placeholder music for now
+        captions: fullScriptText,
         primaryColor: data.primaryColor || defaultPrimaryColor,
         secondaryColor: data.secondaryColor || defaultSecondaryColor,
         fontFamily: data.fontFamily || defaultFontFamily,
@@ -103,7 +115,6 @@ export default function GeneratePage() {
       await handleClientSideRender({
         compositionId: 'MyVideo',
         inputProps: remotionProps,
-        // Duration is now handled by the composition internally or via playerDuration for preview
       });
       toast({ title: 'Video Rendered!', description: 'Your download should start automatically.' });
     } catch (error: any) {
@@ -132,10 +143,10 @@ export default function GeneratePage() {
               onSubmit={handleFormSubmit}
               isLoading={isLoading}
               defaultValues={{
-                topic: '',
+                topic: 'A short interesting historical story',
                 style: 'cinematic',
-                duration: 'long', // Default to long to get more scenes
-                primaryColor: defaultPrimaryColor.toString(), // Ensure string for color input
+                duration: 'long',
+                primaryColor: defaultPrimaryColor.toString(),
                 secondaryColor: defaultSecondaryColor.toString(),
                 fontFamily: defaultFontFamily,
                 imageDurationInFrames: defaultImageDurationInFrames,
@@ -154,7 +165,7 @@ export default function GeneratePage() {
               <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px]">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-muted-foreground">Generating video assets... Please wait.</p>
-                <p className="text-sm text-muted-foreground mt-2">Script generation followed by image generation can take some time.</p>
+                <p className="text-sm text-muted-foreground mt-2">Script, images, and audio generation can take some time.</p>
               </div>
             )}
 
@@ -162,6 +173,7 @@ export default function GeneratePage() {
               <>
                 <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[320px] mx-auto" style={{ aspectRatio: '9/16', height: 'auto' }}>
                    <RemotionPlayer
+                    key={JSON.stringify(remotionProps) + playerDuration} // Force re-render if props or duration change
                     compositionId="MyVideo"
                     inputProps={remotionProps}
                     controls
@@ -228,6 +240,22 @@ export default function GeneratePage() {
                     </div>
                 </CardContent>
               </Card>
+            )}
+            {generatedAudioUri && (
+                <Card className="bg-card/70">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xl font-headline flex items-center">
+                            <Mic className="mr-2 h-5 w-5 text-accent" />
+                            Generated Audio
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <audio controls src={generatedAudioUri} className="w-full">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <p className="text-xs text-muted-foreground mt-2">Voiceover generated by ElevenLabs.</p>
+                    </CardContent>
+                </Card>
             )}
           </CardContent>
         </Card>
