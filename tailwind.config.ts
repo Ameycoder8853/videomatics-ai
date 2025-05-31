@@ -6,12 +6,13 @@ export default {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './remotion/**/*.{js,ts,jsx,tsx,mdx}', // Added Remotion folder
   ],
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        body: ['var(--font-inter)', 'Inter', 'sans-serif'],
+        headline: ['var(--font-poppins)', 'Poppins', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
