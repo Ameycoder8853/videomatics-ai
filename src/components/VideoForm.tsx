@@ -69,7 +69,7 @@ const imageDurationHints = [
 const backgroundMusicOptions = [
     { value: staticFile('placeholder-music.mp3'), label: 'Default Relaxing Tune' },
     { value: staticFile('upbeat-music.mp3'), label: 'Upbeat Energetic Track (Add this file to public/)' }, // Example
-    { value: '', label: 'No Background Music' },
+    { value: 'NO_MUSIC_SELECTED', label: 'No Background Music' },
 ];
 
 

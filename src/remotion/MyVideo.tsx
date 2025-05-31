@@ -7,7 +7,7 @@ export const myVideoSchema = z.object({
   title: z.string().default('My Awesome Video'),
   sceneTexts: z.array(z.string()).default(['Welcome to this amazing video!', 'Let us explore something cool.', 'And conclude with a flourish!']),
   imageUris: z.array(z.string()).default([
-    staticFile('images/placeholder-image1.png'), // These are fallbacks if generation fails
+    staticFile('images/placeholder-image1.png'), 
     staticFile('images/placeholder-image2.png'),
     staticFile('images/placeholder-image3.png'),
   ]),
@@ -17,7 +17,7 @@ export const myVideoSchema = z.object({
   primaryColor: zColor().default('#1F2937'), 
   secondaryColor: zColor().default('#F9FAFB'), 
   fontFamily: z.string().default('Poppins, Inter, sans-serif'),
-  imageDurationInFrames: z.number().int().min(30).default(120), // This will be dynamically overridden by audio length calculation
+  imageDurationInFrames: z.number().int().min(30).default(120), 
 });
 
 export type CompositionProps = z.infer<typeof myVideoSchema>;
@@ -26,8 +26,7 @@ const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, 
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Animate in for the first 20% of scene duration, out for the last 20%
-  const fadeInDuration = Math.min(fps * 0.8, sceneDurationInFrames * 0.2); // e.g. 0.8s or 20% of scene, whichever is shorter
+  const fadeInDuration = Math.min(fps * 0.8, sceneDurationInFrames * 0.2); 
   const fadeOutStart = sceneDurationInFrames - Math.min(fps * 0.8, sceneDurationInFrames * 0.2);
 
   const opacity = interpolate(
@@ -40,7 +39,7 @@ const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, 
   const translateY = interpolate(
     frame,
     [0, fadeInDuration, fadeOutStart, sceneDurationInFrames],
-    [30, 0, 0, -30], // Slide in from bottom, slide out to top
+    [30, 0, 0, -30], 
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.33, 1, 0.68, 1) }
   );
 
@@ -78,38 +77,40 @@ export const MyVideoComposition: React.FC<CompositionProps> = ({
   primaryColor,
   secondaryColor,
   fontFamily,
-  imageDurationInFrames, // This is now the DYNAMICALLY calculated duration for EACH scene
+  imageDurationInFrames, 
 }) => {
   const { fps } = useVideoConfig();
 
   const safeImageUris = imageUris && imageUris.length > 0 ? imageUris : [staticFile('images/placeholder-image1.png')];
   const safeSceneTexts = sceneTexts && sceneTexts.length > 0 ? sceneTexts : ['Your video content.'];
 
-  // Ensure imageUris and sceneTexts have the same length for mapping, pad if necessary
   const numScenes = Math.max(safeImageUris.length, safeSceneTexts.length);
-  const finalImageUris = Array.from({ length: numScenes }, (_, i) => safeImageUris[i] || safeImageUris[0]);
-  const finalSceneTexts = Array.from({ length: numScenes }, (_, i) => safeSceneTexts[i] || safeSceneTexts[0]);
+  const finalImageUris = Array.from({ length: numScenes }, (_, i) => safeImageUris[i] || safeImageUris[0] || staticFile('images/placeholder-image1.png'));
+  const finalSceneTexts = Array.from({ length: numScenes }, (_, i) => safeSceneTexts[i] || safeSceneTexts[0] || ' ');
 
 
   if (typeof window !== 'undefined') {
-    console.log('MyVideoComposition Props Check:');
-    console.log('  Received audioUri:', audioUri);
-    console.log('  Received musicUri:', musicUri);
-    console.log('  Number of scenes based on images:', finalImageUris.length);
-    console.log('  Number of scene texts:', finalSceneTexts.length);
-    console.log('  Calculated imageDurationInFrames (per scene):', imageDurationInFrames);
+    console.log('MyVideoComposition Props:');
+    console.log('  audioUri (prop):', audioUri);
+    console.log('  musicUri (prop):', musicUri);
+    if (audioUri) console.log('  Resolved Audio URI for <Audio>:', audioUri.startsWith('/') ? staticFile(audioUri.substring(1)) : audioUri);
+    if (musicUri) console.log('  Resolved Music URI for <Audio>:', musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri);
+    console.log('  Number of scenes (finalImageUris):', finalImageUris.length);
+    console.log('  Number of scene texts (finalSceneTexts):', finalSceneTexts.length);
+    console.log('  imageDurationInFrames (per scene):', imageDurationInFrames);
   }
+  
+  const playMusic = musicUri && musicUri !== 'NO_MUSIC_SELECTED' && musicUri !== '';
 
   return (
     <AbsoluteFill style={{ backgroundColor: primaryColor.toString() }}>
-      {musicUri && <Audio src={musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri} volume={0.1} loop />}
-      {audioUri && <Audio src={audioUri} volume={0.9} />} {/* Data URIs are passed directly */}
+      {playMusic && musicUri && <Audio src={musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri} volume={0.1} loop />}
+      {audioUri && <Audio src={audioUri} volume={0.9} />} 
 
       {finalImageUris.map((imageSrc, index) => {
         const textForThisSlide = finalSceneTexts[index];
         const sequenceStartFrame = index * imageDurationInFrames;
         
-        // Ken Burns effect for each image
         const imageScale = spring({
           frame: useCurrentFrame() - sequenceStartFrame,
           fps,
@@ -131,7 +132,6 @@ export const MyVideoComposition: React.FC<CompositionProps> = ({
           {easing: Easing.linear}
         );
         
-        // Fade effect for image transitions
         const imageOpacity = interpolate(
           useCurrentFrame() - sequenceStartFrame,
           [0, fps * 0.5, imageDurationInFrames - fps * 0.5, imageDurationInFrames],
