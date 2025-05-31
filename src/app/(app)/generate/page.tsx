@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { handleClientSideRender } from '@/lib/remotion';
 import type { CompositionProps } from '@/remotion/MyVideo';
 import { myVideoSchema } from '@/remotion/MyVideo';
+import { staticFile } from 'remotion'; // Added import for staticFile
 
 // Helper function to get audio duration
 const getAudioDuration = (audioDataUri: string): Promise<number> => {
