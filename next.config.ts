@@ -1,5 +1,9 @@
+
 import type {NextConfig} from 'next';
-import { CachingStrategy } from '@remotion/next/dist/webpack-override';
+// CachingStrategy might be useful if you customize withRemotion options,
+// but it's not strictly necessary for basic setup.
+// import { CachingStrategy } from '@remotion/next/dist/webpack-override';
+// import {withRemotion} from '@remotion/next'; // Commented out due to installation issues
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -40,12 +44,14 @@ const nextConfig: NextConfig = {
     });
     
     // Remotion: Allows HMR to work inside node_modules for Remotion packages
-    config.watchOptions = {
-      ignored: ['**/node_modules/**'],
-    };
+    // This watchOptions might be handled by withRemotion, but keeping it shouldn't harm.
+    // config.watchOptions = {
+    //   ignored: ['**/node_modules/**'],
+    // };
 
     // Remotion: Prevent errors from breaking the build
     // This is a common workaround for issues with certain Remotion dependencies or features in Next.js
+    // withRemotion might also handle some of these.
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -66,12 +72,7 @@ const nextConfig: NextConfig = {
   // (Next.js does this by default, but ensure no conflicting configs)
 };
 
-// If you have @remotion/next installed, you could wrap with `withRemotion`
-// import {withRemotion} from '@remotion/next';
-// export default withRemotion(nextConfig, {
-//   publicDir: 'public', // Default public directory
-//   // Optional: Caching strategy for Remotion assets
-//   // cachingStrategy: CachingStrategy.FS // Example: File system caching
-// });
-
-export default nextConfig;
+// Wrap the Next.js config with withRemotion
+// You can pass options to withRemotion if needed, e.g., { publicDir: 'public' }
+// export default withRemotion(nextConfig); // Commented out due to installation issues
+export default nextConfig; // Exporting nextConfig directly
