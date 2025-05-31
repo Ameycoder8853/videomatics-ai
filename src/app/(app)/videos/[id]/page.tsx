@@ -1,127 +1,300 @@
+
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Download, Edit3, Trash2 } from 'lucide-react';
-import { RemotionPlayer } from '@/components/RemotionPlayer'; // Placeholder
-import { CompositionProps } from '@/remotion/MyVideo'; // Assuming MyVideoProps type from Remotion setup
+import { ArrowLeft, Download, Edit3, Trash2, Loader2, AlertTriangle, Info, Image as ImageIcon, FileTextIcon, PaletteIcon, TypeIcon as FontIcon, ClockIcon as DurationIcon, MusicIcon } from 'lucide-react';
+import { RemotionPlayer } from '@/components/RemotionPlayer';
+import type { CompositionProps } from '@/remotion/MyVideo';
 import { useEffect, useState } from 'react';
-
-// Mock video data structure
-interface VideoDetails {
-  id: string;
-  title: string;
-  description: string;
-  videoUrl?: string; // This would be the Remotion composition or a rendered URL
-  thumbnailUrl: string;
-  createdAt: Date;
-  script: string;
-  imageUri: string;
-  audioUri: string;
-  captions: string;
-  dataAiHint?: string;
-}
-
-// Mock fetch function
-const fetchVideoDetails = async (id: string): Promise<VideoDetails | null> => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  if (id === '1') {
-    return {
-      id: '1',
-      title: 'My First AI Video',
-      description: 'An amazing video generated entirely by AI!',
-      thumbnailUrl: 'https://placehold.co/1280x720.png',
-      createdAt: new Date(),
-      script: "Scene 1: A vibrant abstract animation unfolds...",
-      imageUri: "https://placehold.co/1080x1920.png",
-      audioUri: "/placeholder-audio.mp3", // Make sure this path is valid or use a full URL
-      captions: "This is a caption for the first video.",
-      dataAiHint: "abstract animation"
-    };
-  }
-  return null;
-};
+import { getVideoDocument, VideoDocument, deleteVideoDocument } from '@/firebase/firestore'; // Assuming delete function exists
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { handleClientSideRender } from '@/lib/remotion';
+import { Timestamp } from 'firebase/firestore';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 export default function VideoDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const videoId = params.id as string;
-  const [video, setVideo] = useState<VideoDetails | null>(null);
+  
+  const [video, setVideo] = useState<VideoDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRendering, setIsRendering] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (videoId) {
-      fetchVideoDetails(videoId).then(data => {
-        setVideo(data);
+      setLoading(true);
+      getVideoDocument(videoId).then(data => {
+        if (data) {
+          setVideo({
+            ...data,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
+          } as VideoDocument); // Cast needed because of Timestamp conversion
+        } else {
+          setVideo(null);
+        }
+        setLoading(false);
+      }).catch(err => {
+        console.error("Error fetching video details:", err);
+        toast({ title: "Error", description: "Could not fetch video details.", variant: "destructive"});
         setLoading(false);
       });
     }
-  }, [videoId]);
+  }, [videoId, toast]);
+
+  const onRenderVideo = async () => {
+    if (!video) {
+      toast({ title: 'Error', description: 'No video data to render.', variant: 'destructive' });
+      return;
+    }
+    setIsRendering(true);
+    toast({ title: 'Rendering video...', description: 'This might take a moment.'});
+    try {
+      const remotionPropsForRender: CompositionProps = {
+        title: video.scriptDetails?.title || video.title,
+        sceneTexts: video.scriptDetails?.scenes.map(s => s.contentText) || [],
+        imageUris: video.imageUris || [],
+        audioUri: video.audioUri,
+        musicUri: video.musicUri,
+        captions: video.captions,
+        primaryColor: video.primaryColor,
+        secondaryColor: video.secondaryColor,
+        fontFamily: video.fontFamily,
+        imageDurationInFrames: video.imageDurationInFrames,
+      };
+      await handleClientSideRender({
+        compositionId: 'MyVideo',
+        inputProps: remotionPropsForRender,
+      });
+      toast({ title: 'Video Rendered!', description: 'Your download should start automatically.' });
+    } catch (error: any) {
+      console.error('Rendering failed:', error);
+      toast({ title: 'Render Failed', description: error.message, variant: 'destructive'});
+    } finally {
+      setIsRendering(false);
+    }
+  };
+
+  const handleDeleteVideo = async () => {
+    if (!video || !video.id || !user) return;
+    if (video.userId !== user.uid) {
+        toast({ title: "Unauthorized", description: "You can only delete your own videos.", variant: "destructive" });
+        return;
+    }
+    setIsDeleting(true);
+    toast({title: "Deleting video..."});
+    try {
+        await deleteVideoDocument(video.id);
+        toast({ title: "Video Deleted", description: `"${video.title}" has been removed.`, variant: "default" });
+        router.push('/dashboard');
+    } catch (error: any) {
+        console.error("Error deleting video:", error);
+        toast({ title: "Deletion Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
+    return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" /></div>;
   }
 
   if (!video) {
     return (
       <div className="text-center py-10">
+        <AlertTriangle className="mx-auto h-16 w-16 text-destructive mb-4" />
         <h1 className="text-2xl font-bold">Video Not Found</h1>
         <p className="text-muted-foreground">The video you're looking for doesn't exist or has been moved.</p>
         <Button asChild className="mt-4">
-          <Link href="/videos"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Videos</Link>
+          <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard</Link>
         </Button>
       </div>
     );
   }
   
-  const remotionInputProps: CompositionProps = {
-    script: video.script,
-    imageUri: video.imageUri,
+  const remotionPlayerProps: CompositionProps = {
+    title: video.scriptDetails?.title || video.title,
+    sceneTexts: video.scriptDetails?.scenes.map(s => s.contentText) || [],
+    imageUris: video.imageUris || [],
     audioUri: video.audioUri,
+    musicUri: video.musicUri,
     captions: video.captions,
+    primaryColor: video.primaryColor,
+    secondaryColor: video.secondaryColor,
+    fontFamily: video.fontFamily,
+    imageDurationInFrames: video.imageDurationInFrames,
   };
 
   return (
     <div className="space-y-8">
-      <Link href="/videos" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to My Videos
+        Back to Dashboard
       </Link>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl font-headline">{video.title}</CardTitle>
-          <CardDescription>Created on: {new Date(video.createdAt).toLocaleDateString()}</CardDescription>
+      <Card className="shadow-xl">
+        <CardHeader className="border-b">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-3xl font-headline">{video.title || "Untitled Video"}</CardTitle>
+              <CardDescription>Created on: {new Date(video.createdAt).toLocaleDateString()}</CardDescription>
+              <Badge variant={video.status === 'completed' ? 'default' : video.status === 'failed' ? 'destructive' : 'secondary'} className="mt-2 capitalize">
+                Status: {video.status}
+              </Badge>
+              {video.status === 'failed' && video.errorMessage && (
+                <p className="text-xs text-destructive mt-1">Error: {video.errorMessage}</p>
+              )}
+            </div>
+            <div className="flex space-x-2">
+                <Button onClick={onRenderVideo} disabled={isRendering || video.status !== 'completed'} variant="outline">
+                    {isRendering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    {isRendering ? 'Rendering...' : 'Download'}
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={isDeleting}>
+                      {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the video titled "{video.title || 'this video'}".
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteVideo} className="bg-destructive hover:bg-destructive/90">
+                        Confirm Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner">
-            {/* Replace with actual Remotion player or video element */}
-            <RemotionPlayer
-              compositionId="MyVideo"
-              inputProps={remotionInputProps}
-              controls
-              style={{ width: '100%', height: '100%' }}
-              data-ai-hint={video.dataAiHint || "video content"}
-            />
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+          <div className="md:col-span-2 space-y-6">
+            <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-md mx-auto md:max-w-none" style={{aspectRatio: '9/16'}}>
+                {video.status === 'completed' ? (
+                    <RemotionPlayer
+                        key={video.id + (video.audioUri || '')} // Add audioUri to key to force re-render if it changes
+                        compositionId="MyVideo"
+                        inputProps={remotionPlayerProps}
+                        controls
+                        style={{ width: '100%', height: '100%' }}
+                        durationInFrames={video.totalDurationInFrames}
+                        fps={30}
+                        loop
+                        data-ai-hint={video.scriptDetails?.scenes[0]?.imagePrompt || "video content"}
+                    />
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted-foreground/10">
+                        <Film className="h-24 w-24 text-muted-foreground/50 mb-4"/>
+                        <p className="text-muted-foreground">Video preview unavailable.</p>
+                        <p className="text-sm text-muted-foreground">Status: {video.status}</p>
+                    </div>
+                )}
+            </div>
+
+            {video.scriptDetails && (
+              <div>
+                <h3 className="font-semibold text-xl mb-3 font-headline flex items-center"><FileTextIcon className="mr-2 h-5 w-5 text-accent"/>Script</h3>
+                <div className="space-y-3 max-h-96 overflow-y-auto p-3 bg-muted/30 rounded-md border">
+                    {video.scriptDetails.scenes.map((scene, index) => (
+                        <div key={index} className="p-3 border rounded-md bg-background shadow-sm">
+                        <h4 className="font-semibold text-primary">Scene {index + 1}</h4>
+                        <p className="mt-1 text-sm"><strong className="font-medium text-muted-foreground">Visual:</strong> {scene.imagePrompt}</p>
+                        <p className="mt-1 text-sm"><strong className="font-medium text-muted-foreground">Text:</strong> {scene.contentText}</p>
+                        </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div>
-            <h3 className="font-semibold text-lg mb-2 font-headline">Video Details</h3>
-            <p className="text-sm text-muted-foreground">{video.description}</p>
-          </div>
-          
-          <div>
-            <h3 className="font-semibold text-lg mb-2 font-headline">Script</h3>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{video.script}</p>
-          </div>
+          <div className="md:col-span-1 space-y-4">
+            <h3 className="font-semibold text-xl font-headline flex items-center"><Info className="mr-2 h-5 w-5 text-accent"/>Video Configuration</h3>
+            
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground flex items-center"><DurationIcon className="mr-1.5 h-4 w-4"/>Total Duration:</dt>
+                <dd>{(video.totalDurationInFrames / 30).toFixed(1)}s</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground flex items-center"><ClockIcon className="mr-1.5 h-4 w-4"/>Duration/Scene:</dt>
+                <dd>{(video.imageDurationInFrames / 30).toFixed(1)}s</dd>
+              </div>
+               <div className="flex justify-between">
+                <dt className="text-muted-foreground flex items-center"><ImageIcon className="mr-1.5 h-4 w-4"/>Scenes/Images:</dt>
+                <dd>{video.scriptDetails?.scenes?.length || video.imageUris?.length || 0}</dd>
+              </div>
+              <div className="flex justify-between items-center">
+                <dt className="text-muted-foreground flex items-center"><PaletteIcon className="mr-1.5 h-4 w-4"/>Primary Color:</dt>
+                <dd><div className="w-4 h-4 rounded border" style={{backgroundColor: video.primaryColor}}></div></dd>
+              </div>
+              <div className="flex justify-between items-center">
+                <dt className="text-muted-foreground flex items-center"><PaletteIcon className="mr-1.5 h-4 w-4" style={{opacity:0.6}}/>Secondary Color:</dt>
+                <dd><div className="w-4 h-4 rounded border" style={{backgroundColor: video.secondaryColor}}></div></dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground flex items-center"><FontIcon className="mr-1.5 h-4 w-4"/>Font Family:</dt>
+                <dd className="truncate max-w-[150px]">{video.fontFamily.split(',')[0]}</dd>
+              </div>
+              {video.musicUri && video.musicUri !== 'NO_MUSIC_SELECTED' && (
+                <div className="flex justify-between">
+                    <dt className="text-muted-foreground flex items-center"><MusicIcon className="mr-1.5 h-4 w-4"/>Music:</dt>
+                    <dd className="truncate max-w-[150px]">{video.musicUri.substring(video.musicUri.lastIndexOf('/') + 1)}</dd>
+                </div>
+              )}
+            </dl>
 
-          <div className="flex space-x-4 pt-4 border-t">
-            <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Download Video</Button>
-            <Button variant="outline" disabled><Edit3 className="mr-2 h-4 w-4" /> Edit (Coming Soon)</Button>
-            <Button variant="destructive" disabled><Trash2 className="mr-2 h-4 w-4" /> Delete (Coming Soon)</Button>
+            {video.imageUris && video.imageUris.length > 0 && (
+                 <div className="mt-4">
+                    <h4 className="font-semibold text-lg mb-2 font-headline flex items-center"><ImageIcon className="mr-2 h-5 w-5 text-accent"/>Generated Images</h4>
+                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                        {video.imageUris.map((imgUrl, index) => (
+                            <div key={index} className="relative aspect-[9/16] rounded-md overflow-hidden shadow">
+                                <img src={imgUrl} alt={`Scene ${index + 1}`} className="absolute inset-0 w-full h-full object-cover"/>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+            
+            {video.audioUri && (
+                <div className="mt-4">
+                    <h4 className="font-semibold text-lg mb-2 font-headline">Voiceover</h4>
+                    <audio controls src={video.audioUri} className="w-full">Your browser does not support audio.</audio>
+                </div>
+            )}
+            {video.captions && (
+                <div className="mt-4">
+                    <h4 className="font-semibold text-lg mb-2 font-headline">Transcript</h4>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap p-2 border rounded-md max-h-40 overflow-y-auto">{video.captions}</p>
+                </div>
+            )}
           </div>
         </CardContent>
       </Card>

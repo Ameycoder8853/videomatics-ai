@@ -1,18 +1,43 @@
+
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, Film } from "lucide-react";
-import { DashboardList } from "@/components/DashboardList"; // Assuming this component will be created
+import { PlusCircle, Film, Loader2 } from "lucide-react";
+import { DashboardList } from "@/components/DashboardList";
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserVideos, VideoDocument } from '@/firebase/firestore';
 
 export default function DashboardPage() {
-  // Mock data for now, replace with actual data fetching
-  const mockVideos = [
-    { id: '1', title: 'My First AI Video', thumbnailUrl: 'https://placehold.co/300x200.png', status: 'completed', createdAt: new Date() , dataAiHint: "abstract animation" },
-    { id: '2', title: 'Tech Product Demo', thumbnailUrl: 'https://placehold.co/300x200.png', status: 'processing', createdAt: new Date() , dataAiHint: "technology interface"},
-    { id: '3', title: 'Travel Vlog Intro', thumbnailUrl: 'https://placehold.co/300x200.png', status: 'failed', createdAt: new Date(), dataAiHint: "travel landscape" },
-  ];
+  const { user } = useAuth();
+  const [videos, setVideos] = useState<VideoDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      setIsLoading(true);
+      getUserVideos(user.uid)
+        .then(fetchedVideos => {
+          setVideos(fetchedVideos.map(v => ({
+            ...v,
+            // Ensure createdAt is a Date object if it's a Firestore Timestamp
+            createdAt: v.createdAt instanceof Timestamp ? v.createdAt.toDate() : v.createdAt,
+          })) as unknown as VideoDocument[]); // Casting because mapping might change type slightly
+        })
+        .catch(error => {
+          console.error("Failed to fetch user videos:", error);
+          // Optionally show a toast error
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      setVideos([]);
+      setIsLoading(false);
+    }
+  }, [user]);
 
   return (
     <div className="space-y-8">
@@ -29,8 +54,15 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {mockVideos.length > 0 ? (
-        <DashboardList videos={mockVideos} />
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ml-4 text-muted-foreground">Loading your videos...</p>
+        </div>
+      ) : videos.length > 0 ? (
+        // Assuming DashboardList expects `thumbnailUrl` and handles `createdAt` as Date
+        // Also casting to any for DashboardList props until its types are fully aligned
+        <DashboardList videos={videos as any[]} />
       ) : (
         <Card className="text-center py-12">
           <CardHeader>
