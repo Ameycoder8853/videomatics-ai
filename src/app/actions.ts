@@ -7,6 +7,7 @@ import { ai } from '@/ai/genkit';
 // Action to generate video script
 export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
   try {
+    console.log('Generating script with input:', JSON.stringify(input));
     const result = await genVideoScriptFlow(input);
     if (!result || !result.title || !result.scenes || result.scenes.length === 0) {
       throw new Error('AI failed to generate a structured script with title and scenes.');
@@ -17,6 +18,7 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
             throw new Error(`Scene ${index + 1} is missing imagePrompt or contentText.`);
         }
     });
+    console.log('Script generated successfully:', result.title);
     return result;
   } catch (error: any) {
     console.error('Error in generateScriptAction:', error);
@@ -45,7 +47,7 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
 
     for (let i = 0; i < promptsToProcess.length; i++) {
       const imagePrompt = promptsToProcess[i];
-      console.log(`Generating image ${i + 1} with prompt: "${imagePrompt}"`);
+      console.log(`Generating image ${i + 1} of ${promptsToProcess.length} with prompt: "${imagePrompt}"`);
       const {media} = await ai.generate({
         model: 'googleai/gemini-2.0-flash-exp',
         prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: "${imagePrompt}". The image should be in portrait orientation (1080x1920).`,
@@ -65,12 +67,13 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
         imageUrls.push('https://placehold.co/1080x1920.png?text=Image+Gen+Failed');
       } else {
         imageUrls.push(media.url);
+        console.log(`Image ${i + 1} generated.`);
       }
     }
      if (imageUrls.filter(url => !url.includes('placehold.co')).length === 0 && promptsToProcess.length > 0) {
         throw new Error('AI failed to generate any images successfully.');
     }
-
+    console.log('All images processed. Total generated (or placeholders):', imageUrls.length);
     return { imageUrls };
   } catch (error: any) {
     console.error('Error in generateImagesAction:', error);
@@ -121,26 +124,42 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
         model_id: modelId,
         voice_settings: {
           stability: 0.5,
-          similarity_boost: 0.75, // Boost similarity a bit for consistency
-          style: 0.2, // Add a little style
+          similarity_boost: 0.75,
+          style: 0.2, 
           use_speaker_boost: true
         },
       }),
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('ElevenLabs API Error:', response.status, errorBody);
-      throw new Error(`ElevenLabs API request failed with status ${response.status}: ${errorBody}`);
+      let errorBodyText = 'Could not retrieve error body from ElevenLabs.';
+      try {
+        errorBodyText = await response.text();
+      } catch (e) {
+        console.error('Failed to read error body from ElevenLabs response:', e);
+      }
+      console.error('ElevenLabs API Error:', response.status, errorBodyText);
+      throw new Error(`ElevenLabs API request failed with status ${response.status}: ${errorBodyText}`);
     }
-
-    const audioBlob = await response.blob();
-    const buffer = await audioBlob.arrayBuffer();
-    const base64Audio = Buffer.from(buffer).toString('base64');
-    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+    
+    let audioDataUri: string;
+    try {
+        const audioBlob = await response.blob();
+        if (audioBlob.type !== 'audio/mpeg' && audioBlob.type !== 'audio/mp3') {
+            const responseText = await audioBlob.text(); // Try to get text if it's not audio
+            console.error('ElevenLabs did not return audio. Response:', responseText);
+            throw new Error(`ElevenLabs returned non-audio content: ${responseText.substring(0,100)}`);
+        }
+        const buffer = await audioBlob.arrayBuffer();
+        const base64Audio = Buffer.from(buffer).toString('base64');
+        audioDataUri = `data:${response.headers.get('content-type') || 'audio/mpeg'};base64,${base64Audio}`;
+    } catch (e: any) {
+        console.error('Error processing ElevenLabs audio blob:', e);
+        throw new Error(`Failed to process audio data from ElevenLabs: ${e.message}`);
+    }
     
     console.log('Audio generated successfully from ElevenLabs.');
-    return { audioUrl };
+    return { audioUrl: audioDataUri };
 
   } catch (error: any) {
     console.error('Error in generateAudioAction (ElevenLabs):', error);
@@ -167,4 +186,3 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     transcript: 'This is a placeholder transcript for the provided audio.'
   };
 }
-
