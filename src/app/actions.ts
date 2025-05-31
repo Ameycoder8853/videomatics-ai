@@ -74,11 +74,15 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
     return { imageUrls };
   } catch (error: any) {
     console.error('Error in generateImagesAction:', error);
-    if (error.message?.includes('USER_LOCATION_INVALID')) {
+    const errorMessage = error.message?.toLowerCase() || '';
+    if (errorMessage.includes('user_location_invalid')) {
         throw new Error('Image generation is not available in your region.');
     }
-    if (error.message?.includes('prompt was blocked')) {
+    if (errorMessage.includes('prompt was blocked')) {
         throw new Error('Image generation failed because the prompt was blocked by safety settings.');
+    }
+    if (errorMessage.includes('429') || errorMessage.includes('quota exceeded') || errorMessage.includes('rate limit')) {
+        throw new Error('Image generation failed due to API rate limits (quota exceeded). Please try again in a minute or check your API plan.');
     }
     throw new Error(`Image generation failed: ${error.message || 'Unknown error'}`);
   }
