@@ -8,8 +8,8 @@ export const myVideoSchema = z.object({
   imageUri: z.string().default(staticFile('images/placeholder-image.png')), // Default to a local placeholder
   audioUri: z.string().optional(),
   captions: z.string().optional().default('Placeholder captions.'),
-  primaryColor: zColor().default(zColor().parse('#673AB7')), // Deep Purple
-  secondaryColor: zColor().default(zColor().parse('#FFFFFF')), // White
+  primaryColor: zColor().default('#673AB7'), // Deep Purple - Simplified default
+  secondaryColor: zColor().default('#FFFFFF'), // White - Simplified default
   fontFamily: z.string().default('Poppins, Inter, sans-serif'),
 });
 
