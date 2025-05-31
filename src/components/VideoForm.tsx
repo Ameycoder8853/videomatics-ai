@@ -9,19 +9,19 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Wand2, Palette, Type, ClockIcon } from 'lucide-react';
-import { myVideoSchema } from '@/remotion/MyVideo'; // Import schema for defaults
+import { Loader2, Wand2, Palette, Type, ClockIcon, Music } from 'lucide-react';
+import { myVideoSchema } from '@/remotion/MyVideo'; 
+import { staticFile } from 'remotion';
 
-// Create a Zod schema for the form by picking relevant fields from myVideoSchema
-// and adding form-specific fields like topic.
 const videoFormSchema = z.object({
   topic: z.string().min(10, { message: 'Topic must be at least 10 characters long.' }).max(200, { message: 'Topic must be at most 200 characters long.' }),
   style: z.string().optional(),
-  duration: z.string().optional(), // This is a category (short, medium, long), not exact frames
+  duration: z.string().optional(), 
   primaryColor: myVideoSchema.shape.primaryColor.optional(),
   secondaryColor: myVideoSchema.shape.secondaryColor.optional(),
   fontFamily: myVideoSchema.shape.fontFamily.optional(),
-  imageDurationInFrames: myVideoSchema.shape.imageDurationInFrames.optional(),
+  imageDurationInFrames: myVideoSchema.shape.imageDurationInFrames.optional(), // This is now a HINT for script generation
+  musicUri: z.string().optional(), // For background music selection
 });
 
 export type VideoFormValues = z.infer<typeof videoFormSchema>;
@@ -45,9 +45,9 @@ const videoStyles = [
 ];
 
 const videoDurations = [
-  { value: 'short', label: 'Short (e.g., < 1 min)' },
-  { value: 'medium', label: 'Medium (e.g., 1-3 mins)' },
-  { value: 'long', label: 'Long (e.g., > 3 mins)' },
+  { value: 'short', label: 'Short (AI aims for ~3-5 scenes)' },
+  { value: 'medium', label: 'Medium (AI aims for ~5-8 scenes)' },
+  { value: 'long', label: 'Long (AI aims for ~8-15 scenes)' },
 ];
 
 const fontFamilies = [
@@ -58,25 +58,33 @@ const fontFamilies = [
     { value: 'Open Sans, sans-serif', label: 'Open Sans (Readable)' },
 ];
 
-const imageDurationsOptions = [
-    { value: 60, label: '2 Seconds (Fast Pace)' },
-    { value: 90, label: '3 Seconds (Medium Pace)' },
-    { value: 120, label: '4 Seconds (Standard Pace)' },
-    { value: 150, label: '5 Seconds (Slower Pace)' },
+// This now serves as a hint for the AI script generator
+const imageDurationHints = [
+    { value: 60, label: '2s/scene (Fast Pace Hint)' },
+    { value: 90, label: '3s/scene (Medium Pace Hint)' },
+    { value: 120, label: '4s/scene (Standard Pace Hint)' },
+    { value: 150, label: '5s/scene (Slower Pace Hint)' },
+];
+
+const backgroundMusicOptions = [
+    { value: staticFile('placeholder-music.mp3'), label: 'Default Relaxing Tune' },
+    { value: staticFile('upbeat-music.mp3'), label: 'Upbeat Energetic Track (Add this file to public/)' }, // Example
+    { value: '', label: 'No Background Music' },
 ];
 
 
 export function VideoForm({ onSubmit, isLoading, defaultValues }: VideoFormProps) {
   const form = useForm<VideoFormValues>({
     resolver: zodResolver(videoFormSchema),
-    defaultValues: { // Ensure all fields in VideoFormValues are covered
+    defaultValues: { 
       topic: defaultValues?.topic || '',
       style: defaultValues?.style || '',
-      duration: defaultValues?.duration || '',
+      duration: defaultValues?.duration || 'long', // Default to long
       primaryColor: defaultValues?.primaryColor || myVideoSchema.shape.primaryColor.parse(undefined),
       secondaryColor: defaultValues?.secondaryColor || myVideoSchema.shape.secondaryColor.parse(undefined),
       fontFamily: defaultValues?.fontFamily || myVideoSchema.shape.fontFamily.parse(undefined),
       imageDurationInFrames: defaultValues?.imageDurationInFrames || myVideoSchema.shape.imageDurationInFrames.parse(undefined),
+      musicUri: defaultValues?.musicUri ?? staticFile('placeholder-music.mp3'),
     },
   });
 
@@ -135,11 +143,11 @@ export function VideoForm({ onSubmit, isLoading, defaultValues }: VideoFormProps
           name="duration"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Video Length Category (Optional)</FormLabel>
+              <FormLabel>Desired Video Length (AI Guided)</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select desired length" />
+                    <SelectValue placeholder="Select desired length category" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -160,7 +168,7 @@ export function VideoForm({ onSubmit, isLoading, defaultValues }: VideoFormProps
           name="imageDurationInFrames"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center"><ClockIcon className="mr-2 h-4 w-4 text-muted-foreground" />Duration Per Image</FormLabel>
+              <FormLabel className="flex items-center"><ClockIcon className="mr-2 h-4 w-4 text-muted-foreground" />Scene Duration Hint for AI</FormLabel>
               <Select
                 onValueChange={(value) => field.onChange(parseInt(value, 10))}
                 defaultValue={String(field.value)}
@@ -168,18 +176,44 @@ export function VideoForm({ onSubmit, isLoading, defaultValues }: VideoFormProps
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Time each image is shown" />
+                    <SelectValue placeholder="Hint for AI text conciseness" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {imageDurationsOptions.map((option) => (
+                  {imageDurationHints.map((option) => (
                     <SelectItem key={option.value} value={String(option.value)}>
                       {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <FormDescription>Controls slideshow speed.</FormDescription>
+              <FormDescription>Guides AI on text length per scene. Final timing based on audio.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="musicUri"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><Music className="mr-2 h-4 w-4 text-muted-foreground"/>Background Music</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select background music" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {backgroundMusicOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>Ensure custom music files are in your `public/` folder.</FormDescription>
               <FormMessage />
             </FormItem>
           )}

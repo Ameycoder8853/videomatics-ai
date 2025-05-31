@@ -2,22 +2,20 @@
 'use client';
 
 import { renderMedia, RenderMediaOnProgress } from '@remotion/renderer/client';
-import { getCompositions } from 'remotion'; // Correct import for discovering compositions
-import type { CompositionProps } from '@/remotion/MyVideo'; // Import your composition's props type
-import { RemotionRoot } from '@/remotion/Root'; // Import your Root component where compositions are registered
+import { getCompositions, Composition as RemotionCompositionInfo } from 'remotion'; 
+import type { CompositionProps } from '@/remotion/MyVideo'; 
+import { RemotionRoot } from '@/remotion/Root'; 
 
 interface RenderParams {
   compositionId: string;
-  inputProps: CompositionProps; // This should be the fully resolved props
+  inputProps: CompositionProps; 
   onProgress?: RenderMediaOnProgress;
-  // Add other options from RenderMediaOptions if needed, e.g. codec, imageFormat, quality
 }
 
 export const handleClientSideRender = async ({ compositionId, inputProps, onProgress }: RenderParams): Promise<void> => {
   try {
-    // The getCompositions function needs the input props to correctly calculate metadata like duration.
-    const compositions = getCompositions(RemotionRoot, {
-      inputProps: inputProps, // Pass the actual inputProps here
+    const compositions = await getCompositions(RemotionRoot, {
+      inputProps: inputProps, 
     });
 
     const compositionInfo = compositions.find((c) => c.id === compositionId);
@@ -25,30 +23,60 @@ export const handleClientSideRender = async ({ compositionId, inputProps, onProg
       throw new Error(`Composition with ID '${compositionId}' not found.`);
     }
 
-    // Calculate dynamic duration based on inputProps
-    const numberOfScenes = inputProps.sceneTexts?.length || inputProps.imageUris?.length || 1;
-    const durationPerScene = inputProps.imageDurationInFrames || 120; // Default to 120 frames if not specified
-    const actualDurationInFrames = numberOfScenes * durationPerScene;
-    const actualFps = 30; // Assuming consistent FPS for the composition
+    // Calculate dynamic total duration for rendering based on inputProps
+    // This should match how it's calculated for the player in generate/page.tsx
+    let actualTotalDurationInFrames = compositionInfo.durationInFrames; // Fallback to composition default
+    
+    if (inputProps.audioUri && typeof window !== 'undefined') {
+        // Attempt to measure audio for accurate duration, similar to generate page
+        // This is a simplified version, assumes audioUri is a data URI or resolvable URL
+        try {
+            const audio = new Audio(inputProps.audioUri);
+            await new Promise<void>((resolve, reject) => {
+                audio.onloadedmetadata = () => {
+                    actualTotalDurationInFrames = Math.ceil(audio.duration * (compositionInfo.fps || 30));
+                    console.log("handleClientSideRender: Measured audio, total render duration frames:", actualTotalDurationInFrames);
+                    resolve();
+                };
+                audio.onerror = () => {
+                    console.warn("handleClientSideRender: Could not load audio metadata for duration calculation during render. Using composition default.");
+                    resolve(); // Resolve anyway to not block rendering, will use default.
+                };
+                 // Timeout if metadata doesn't load quickly
+                setTimeout(() => {
+                    console.warn("handleClientSideRender: Audio metadata load timeout. Using composition default duration.");
+                    resolve();
+                }, 5000); // 5 second timeout
+            });
+        } catch (e) {
+            console.warn("handleClientSideRender: Error in audio duration measurement during render:", e);
+        }
+    } else if (inputProps.sceneTexts && inputProps.imageDurationInFrames) {
+        // Fallback if audioUri is not available or in non-browser (should not happen for client render)
+        actualTotalDurationInFrames = inputProps.sceneTexts.length * inputProps.imageDurationInFrames;
+        console.log("handleClientSideRender: Calculated from scenes, total render duration frames:", actualTotalDurationInFrames);
+    }
 
-    console.log("Calculated duration for renderMedia:", actualDurationInFrames, "frames");
-    console.log("Number of scenes:", numberOfScenes, "Duration per scene:", durationPerScene, "frames");
-    console.log("Input props for renderMedia:", inputProps);
+
+    console.log("Final input props for renderMedia:", inputProps);
+    console.log("Final composition for renderMedia:", {
+        ...compositionInfo,
+        durationInFrames: actualTotalDurationInFrames, // Override with calculated total duration
+        props: inputProps,
+    });
 
 
     const blob = await renderMedia({
-      // Pass the Composition object obtained from getCompositions.
-      // Override its durationInFrames with our dynamically calculated one.
       composition: {
         ...compositionInfo,
-        durationInFrames: actualDurationInFrames, 
-        props: inputProps, 
+        durationInFrames: actualTotalDurationInFrames, // Crucial: Use the dynamically calculated total duration
+        props: inputProps, // Pass the full inputProps, including dynamic imageDurationInFrames (scene duration)
       },
-      inputProps: inputProps, // renderMedia also expects inputProps separately
+      // inputProps: inputProps, // Already part of composition.props
       codec: 'h264',
       imageFormat: 'jpeg',
       outputFormat: 'mp4',
-      fps: actualFps, // Use the defined FPS
+      fps: compositionInfo.fps || 30, 
       width: compositionInfo.width, 
       height: compositionInfo.height, 
       onProgress,
@@ -58,13 +86,13 @@ export const handleClientSideRender = async ({ compositionId, inputProps, onProg
     const a = document.createElement('a');
     a.href = url;
     a.download = `${compositionId}-${Date.now()}.mp4`;
-    document.body.appendChild(a); // Required for Firefox
+    document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
   } catch (error) {
     console.error('Error rendering video in browser:', error);
-    throw error; // Re-throw to be caught by the caller
+    throw error; 
   }
 };
