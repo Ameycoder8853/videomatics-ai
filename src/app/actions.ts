@@ -12,7 +12,6 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
     if (!result || !result.title || !result.scenes || result.scenes.length === 0) {
       throw new Error('AI failed to generate a structured script with title and scenes.');
     }
-    // Basic validation for scene content
     result.scenes.forEach((scene, index) => {
         if (!scene.imagePrompt || !scene.contentText) {
             throw new Error(`Scene ${index + 1} is missing imagePrompt or contentText.`);
@@ -42,34 +41,40 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
   }
 
   try {
-    const promptsToProcess = input.prompts.slice(0, 15);
+    const promptsToProcess = input.prompts.slice(0, 15); // Limit to 15 images for now
 
     for (let i = 0; i < promptsToProcess.length; i++) {
       const imagePrompt = promptsToProcess[i];
       console.log(`Generating image ${i + 1} of ${promptsToProcess.length} with prompt: "${imagePrompt}"`);
-      const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-exp',
-        prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: "${imagePrompt}". The image should be in portrait orientation (1080x1920).`,
-        config: {
-          responseModalities: ['TEXT', 'IMAGE'],
-           safetySettings: [
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          ],
-        },
-      });
+      try {
+        const {media} = await ai.generate({
+          model: 'googleai/gemini-2.0-flash-exp',
+          prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: "${imagePrompt}". The image should be in portrait orientation (1080x1920). Ensure it is safe for all audiences.`,
+          config: {
+            responseModalities: ['TEXT', 'IMAGE'],
+            safetySettings: [ // Stricter safety settings
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            ],
+          },
+        });
 
-      if (!media || !media.url) {
-        console.warn(`AI failed to generate image for prompt: "${imagePrompt}" or returned an invalid response.`);
-        imageUrls.push('https://placehold.co/1080x1920.png?text=Image+Gen+Failed');
-      } else {
-        imageUrls.push(media.url);
-        console.log(`Image ${i + 1} generated.`);
+        if (!media || !media.url) {
+          console.warn(`AI failed to generate image for prompt: "${imagePrompt}" or returned an invalid response.`);
+          imageUrls.push(`https://placehold.co/1080x1920.png?text=Image+Failed+${i + 1}`);
+        } else {
+          imageUrls.push(media.url);
+          console.log(`Image ${i + 1} generated.`);
+        }
+      } catch (singleImageError: any) {
+        console.error(`Error generating image ${i + 1} for prompt "${imagePrompt}":`, singleImageError.message);
+        imageUrls.push(`https://placehold.co/1080x1920.png?text=Error+Img+${i + 1}`);
       }
     }
      if (imageUrls.filter(url => !url.includes('placehold.co')).length === 0 && promptsToProcess.length > 0) {
+        // Only throw if ALL images failed and we actually tried to generate some
         throw new Error('AI failed to generate any images successfully.');
     }
     console.log('All images processed. Total generated (or placeholders):', imageUrls.length);
@@ -80,13 +85,13 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
     if (errorMessage.includes('user_location_invalid')) {
         throw new Error('Image generation is not available in your region.');
     }
-    if (errorMessage.includes('prompt was blocked')) {
-        throw new Error('Image generation failed because the prompt was blocked by safety settings.');
-    }
     if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || errorMessage.includes('429')) {
-        throw new Error('Image generation failed due to API rate limits or quota exceeded. Please wait a minute or check your API plan.');
+        throw new Error('Image generation failed due to API rate limits or quota exceeded. Please wait or check your API plan.');
     }
-    throw new Error(`Image generation failed: ${error.message || 'Unknown error'}`);
+    if (errorMessage.includes('prompt was blocked') || errorMessage.includes('safety settings')) {
+        throw new Error('Image generation failed because a prompt was blocked by safety settings.');
+    }
+    throw new Error(`Image generation failed: ${error.message || 'Unknown error during image batch processing'}`);
   }
 }
 
@@ -104,7 +109,7 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
     throw new Error('ElevenLabs API key is missing. Cannot generate audio.');
   }
 
-  const voiceId = input.voiceId || '21m00Tcm4TlvDq8ikWAM'; // Default to "Rachel"
+  const voiceId = input.voiceId || '21m00Tcm4TlvDq8ikWAM'; 
   const modelId = 'eleven_multilingual_v2';
   const ttsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
 
@@ -144,14 +149,19 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
     let audioDataUri: string;
     try {
         const audioBlob = await response.blob();
-        if (audioBlob.type !== 'audio/mpeg' && audioBlob.type !== 'audio/mp3') {
-            const responseText = await audioBlob.text(); 
-            console.error('ElevenLabs did not return audio. Response:', responseText);
-            throw new Error(`ElevenLabs returned non-audio content type: ${audioBlob.type}. Response text: ${responseText.substring(0,100)}`);
+        if (!audioBlob.type.startsWith('audio/')) { // More generic check for audio type
+            let responseText = "Could not read non-audio response as text.";
+            try {
+              responseText = await audioBlob.text();
+            } catch(e) {
+              console.error("Error reading non-audio response body: ", e)
+            }
+            console.error('ElevenLabs did not return audio. Response Content-Type:', audioBlob.type, 'Response Text:', responseText.substring(0,200));
+            throw new Error(`ElevenLabs returned non-audio content type: ${audioBlob.type}. Response: ${responseText.substring(0,100)}`);
         }
         const buffer = await audioBlob.arrayBuffer();
         const base64Audio = Buffer.from(buffer).toString('base64');
-        audioDataUri = `data:${response.headers.get('content-type') || 'audio/mpeg'};base64,${base64Audio}`;
+        audioDataUri = `data:${audioBlob.type};base64,${base64Audio}`;
     } catch (e: any) {
         console.error('Error processing ElevenLabs audio blob:', e);
         throw new Error(`Failed to process audio data from ElevenLabs: ${e.message}`);
@@ -168,11 +178,10 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
 
 
 interface GenerateCaptionsInput {
-  audioDataUri: string; // Data URI of the audio file to transcribe
+  audioDataUri: string; 
 }
 interface GenerateCaptionsOutput {
-  transcript: string; // Full transcript text
-  // srtCaptions?: string; // Optional: SRT format captions as a string or data URI
+  transcript: string; 
 }
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
@@ -180,23 +189,25 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     console.error('AssemblyAI API key is not set in environment variables.');
     throw new Error('AssemblyAI API key is missing. Cannot generate captions.');
   }
+   if (!input.audioDataUri || !input.audioDataUri.startsWith('data:audio')) {
+    console.error('Invalid audioDataUri for caption generation.');
+    throw new Error('Valid audio data URI is required for caption generation.');
+  }
 
   console.log('Generating captions with AssemblyAI for audio data URI...');
 
   try {
-    // 1. Convert Data URI to Blob
     const fetchResponse = await fetch(input.audioDataUri);
     if (!fetchResponse.ok) {
       throw new Error(`Failed to fetch audio data URI: ${fetchResponse.statusText}`);
     }
     const audioBlob = await fetchResponse.blob();
 
-    // 2. Upload audio to AssemblyAI
     const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
       headers: {
         'authorization': apiKey,
-        'Content-Type': audioBlob.type, // Or specific type like 'audio/mpeg'
+        'Content-Type': audioBlob.type || 'application/octet-stream', 
       },
       body: audioBlob,
     });
@@ -213,7 +224,6 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     }
     console.log('Audio uploaded to AssemblyAI:', audio_url);
 
-    // 3. Submit for transcription
     const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
       headers: {
@@ -235,37 +245,37 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     }
     console.log('Transcription submitted to AssemblyAI, ID:', transcriptId);
 
-    // 4. Poll for completion
     let attempts = 0;
-    const maxAttempts = 30; // Poll for up to 5 minutes (30 attempts * 10s delay)
+    const maxAttempts = 30; 
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     while (attempts < maxAttempts) {
       attempts++;
-      await delay(10000); // Wait 10 seconds
+      await delay(10000); 
       console.log(`Polling AssemblyAI transcript status (attempt ${attempts})...`);
       const pollResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
         headers: { 'authorization': apiKey },
       });
       if (!pollResponse.ok) {
         const errorText = await pollResponse.text();
-        // Don't throw here immediately, could be a transient issue or just not ready
         console.warn(`AssemblyAI polling error: ${pollResponse.status}: ${errorText}`);
-        continue; // Try again
+        if (pollResponse.status === 404 && attempts > 5) { // If transcript ID is gone after a few tries
+            throw new Error(`AssemblyAI transcript ID ${transcriptId} not found after multiple attempts.`);
+        }
+        continue; 
       }
       const pollResult = await pollResponse.json();
 
       if (pollResult.status === 'completed') {
         console.log('AssemblyAI transcription completed.');
-        if (!pollResult.text) {
-            throw new Error('AssemblyAI transcription completed but returned no text.');
+        if (!pollResult.text && pollResult.text !== '') { // Allow empty string for silent audio
+            throw new Error('AssemblyAI transcription completed but returned no text field.');
         }
-        return { transcript: pollResult.text };
+        return { transcript: pollResult.text || "" }; // Return empty string if text is null/undefined
       } else if (pollResult.status === 'failed' || pollResult.status === 'error') {
         console.error('AssemblyAI transcription failed:', pollResult.error || 'Unknown error');
         throw new Error(`AssemblyAI transcription failed: ${pollResult.error || 'Unknown error'}`);
       }
-      // If status is 'queued' or 'processing', continue polling
       console.log('AssemblyAI transcription status:', pollResult.status);
     }
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -14,11 +15,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { logOut } from '@/firebase/auth';
-import { LayoutDashboard, Video, PlusCircle, LogOut, UserCircle, Gem } from 'lucide-react';
+import { LayoutDashboard, Video, PlusCircle, LogOut, UserCircle, Gem, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes'; // For dark mode toggle
 
 export function Navbar() {
   const { user } = useAuth();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
 
   const handleLogout = async () => {
     try {
@@ -26,7 +29,6 @@ export function Navbar() {
       router.push('/login');
     } catch (error) {
       console.error('Failed to log out:', error);
-      // Optionally show a toast notification for logout failure
     }
   };
 
@@ -37,29 +39,36 @@ export function Navbar() {
           <Gem className="h-6 w-6 text-primary" />
           <span className="font-bold font-headline text-xl">VividVerse</span>
         </Link>
-        <nav className="flex flex-1 items-center space-x-4">
+        <nav className="flex flex-1 items-center space-x-2 md:space-x-4">
           <Link href="/dashboard" legacyBehavior passHref>
-            <Button variant="ghost" className="text-sm font-medium">
-              <LayoutDashboard className="mr-2 h-4 w-4" />
+            <Button variant="ghost" className="text-sm font-medium px-2 md:px-3">
+              <LayoutDashboard className="mr-1 md:mr-2 h-4 w-4" />
               Dashboard
             </Button>
           </Link>
           <Link href="/generate" legacyBehavior passHref>
-            <Button variant="ghost" className="text-sm font-medium">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create Video
+            <Button variant="ghost" className="text-sm font-medium px-2 md:px-3">
+              <PlusCircle className="mr-1 md:mr-2 h-4 w-4" />
+              Create
             </Button>
           </Link>
           <Link href="/videos" legacyBehavior passHref>
-             <Button variant="ghost" className="text-sm font-medium">
-                <Video className="mr-2 h-4 w-4" />
+             <Button variant="ghost" className="text-sm font-medium px-2 md:px-3">
+                <Video className="mr-1 md:mr-2 h-4 w-4" />
                 My Videos
             </Button>
           </Link>
         </nav>
-        <div className="flex items-center space-x-4">
-          {/* Placeholder for CreditSystem component */}
-          {/* <CreditSystem /> */}
+        <div className="flex items-center space-x-2 md:space-x-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label="Toggle theme"
+          >
+            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          </Button>
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -80,10 +89,6 @@ export function Navbar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {/* <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem> */}
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -92,7 +97,7 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <Link href="/login" legacyBehavior passHref>
-              <Button>Login</Button>
+              <Button size="sm">Login</Button>
             </Link>
           )}
         </div>
