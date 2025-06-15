@@ -1,10 +1,12 @@
+
 'use client';
 
 import { ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar'; // Navbar is used by both app and top-level dashboard
 import { Toaster } from '@/components/ui/toaster';
+import { Loader2 } from 'lucide-react';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -17,10 +19,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router]);
 
   if (loading || !user) {
-    // You can show a global loading spinner here, or rely on AuthProvider's loading
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
+        <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
       </div>
     );
   }
@@ -28,7 +29,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-grow container mx-auto px-4 py-6 sm:py-8">
         {children}
       </main>
       <footer className="py-6 text-center text-muted-foreground text-sm border-t">

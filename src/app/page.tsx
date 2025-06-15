@@ -10,16 +10,9 @@ import { Gem, PlayCircle, BrainCircuit, Image as ImageIcon, Mic2, Palette, Zap, 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.replace('/dashboard');
-      }
-    }
-  }, [user, loading, router]);
+  const { loading } = useAuth();
+  // Removed router and user dependency, and the useEffect that redirected authenticated users.
+  // Logged-in users can now see the landing page.
 
   if (loading) {
     return (
@@ -30,38 +23,38 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-purple-50 dark:via-purple-900/20 to-background p-6 text-center">
-      <main className="container mx-auto px-4 py-8 md:py-16">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-purple-50 dark:via-purple-900/20 to-background p-4 sm:p-6 text-center">
+      <main className="container mx-auto px-2 sm:px-4 py-8 md:py-16">
         <header className="mb-12 md:mb-20">
-          <div className="flex justify-center items-center space-x-3 mb-6">
-            <Gem className="h-12 w-12 md:h-16 md:w-16 text-primary" />
-            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary">VividVerse</h1>
+          <div className="flex justify-center items-center space-x-2 sm:space-x-3 mb-6">
+            <Gem className="h-10 w-10 sm:h-12 md:h-16 md:w-16 text-primary" />
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-headline font-bold text-primary">VividVerse</h1>
           </div>
-          <p className="text-xl md:text-2xl text-foreground/80 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl md:text-2xl text-foreground/80 max-w-3xl mx-auto">
             Unleash your creativity. Generate stunning videos with the power of AI – from script to final cut, all in your browser.
           </p>
         </header>
 
         <section id="features" className="mb-16 md:mb-24">
-          <h2 className="text-3xl md:text-4xl font-headline font-semibold mb-10 text-center">Features That Shine</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-semibold mb-8 sm:mb-10 text-center">Features That Shine</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <FeatureCard
-              icon={<BrainCircuit className="h-10 w-10 text-accent" />}
+              icon={<BrainCircuit className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
               title="AI Scripting"
               description="Craft compelling narratives based on your topic, style, and desired length."
             />
             <FeatureCard
-              icon={<ImageIcon className="h-10 w-10 text-accent" />}
+              icon={<ImageIcon className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
               title="Visual Generation"
               description="Bring your script to life with AI-generated images that match your story."
             />
             <FeatureCard
-              icon={<Mic2 className="h-10 w-10 text-accent" />}
+              icon={<Mic2 className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
               title="AI Voiceovers"
               description="Add professional voiceovers using advanced text-to-speech technology."
             />
             <FeatureCard
-              icon={<Palette className="h-10 w-10 text-accent" />}
+              icon={<Palette className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
               title="Easy Customization"
               description="Tailor colors, fonts, and pacing to match your brand or vision."
             />
@@ -69,32 +62,32 @@ export default function HomePage() {
         </section>
 
         <section id="how-it-works" className="mb-16 md:mb-24">
-          <h2 className="text-3xl md:text-4xl font-headline font-semibold mb-10 text-center">How It Works</h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-semibold mb-8 sm:mb-10 text-center">How It Works</h2>
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
             <StepCard
               step="1"
               title="Describe Your Video"
               description="Provide a topic, choose a style, and set your desired video length and pace."
-              icon={<Zap className="w-8 h-8 text-primary" />}
+              icon={<Zap className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />}
             />
             <StepCard
               step="2"
               title="AI Generates Assets"
               description="Our AI crafts a script, generates visuals, and creates a voiceover for your story."
-              icon={<Film className="w-8 h-8 text-primary" />}
+              icon={<Film className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />}
             />
             <StepCard
               step="3"
               title="Preview & Download"
               description="Review your AI-generated video, make tweaks if needed, and download your masterpiece."
-              icon={<PlayCircle className="w-8 h-8 text-primary" />}
+              icon={<PlayCircle className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />}
             />
           </div>
         </section>
 
         <div className="space-y-6 text-center">
           <Link href="/signup" passHref>
-            <Button size="lg" className="w-full sm:w-auto px-10 py-6 text-lg bg-primary hover:bg-primary/90 shadow-lg transform hover:scale-105 transition-transform">
+            <Button size="lg" className="w-full sm:w-auto px-8 sm:px-10 py-5 sm:py-6 text-md sm:text-lg bg-primary hover:bg-primary/90 shadow-lg transform hover:scale-105 transition-transform">
               Get Started Free
               <PlayCircle className="ml-2 h-5 w-5" />
             </Button>
@@ -116,20 +109,20 @@ export default function HomePage() {
 }
 
 const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string }> = ({ icon, title, description }) => (
-  <Card className="bg-card/80 dark:bg-card/50 p-6 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 text-center transform hover:-translate-y-1">
-    <div className="flex justify-center mb-4">{icon}</div>
-    <h3 className="text-xl font-headline font-semibold mb-2 text-card-foreground">{title}</h3>
-    <p className="text-sm text-muted-foreground">{description}</p>
+  <Card className="bg-card/80 dark:bg-card/50 p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 text-center transform hover:-translate-y-1">
+    <div className="flex justify-center mb-3 sm:mb-4">{icon}</div>
+    <h3 className="text-lg sm:text-xl font-headline font-semibold mb-1 sm:mb-2 text-card-foreground">{title}</h3>
+    <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
   </Card>
 );
 
 const StepCard: React.FC<{ step: string, title: string, description: string, icon: React.ReactNode }> = ({ step, title, description, icon }) => (
-  <div className="flex flex-col items-center p-6 bg-card/50 dark:bg-card/30 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-    <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-primary/10 text-primary">
+  <div className="flex flex-col items-center p-4 sm:p-6 bg-card/50 dark:bg-card/30 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+    <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 mb-3 sm:mb-4 rounded-full bg-primary/10 text-primary">
       {icon}
     </div>
-    <div className="text-sm font-bold text-primary mb-1">STEP {step}</div>
-    <h3 className="text-lg font-semibold mb-2 text-card-foreground">{title}</h3>
+    <div className="text-xs sm:text-sm font-bold text-primary mb-1">STEP {step}</div>
+    <h3 className="text-md sm:text-lg font-semibold mb-1 sm:mb-2 text-card-foreground">{title}</h3>
     <p className="text-xs text-center text-muted-foreground">{description}</p>
   </div>
 );

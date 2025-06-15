@@ -19,7 +19,6 @@ import { saveVideoMetadata, VideoDocument } from '@/firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 
 
-// Helper function to get audio duration
 const getAudioDuration = (audioDataUri: string): Promise<number> => {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
@@ -28,20 +27,24 @@ const getAudioDuration = (audioDataUri: string): Promise<number> => {
     }
     const audio = new Audio();
     audio.src = audioDataUri;
+    const timer = setTimeout(() => {
+      if (audio.readyState === 0 || isNaN(audio.duration)) {
+        console.warn("Audio metadata load timeout or invalid duration. Defaulting.");
+        resolve(30); // Fallback duration
+        audio.onerror = null; // Clean up to prevent late firing
+        audio.onloadedmetadata = null;
+      }
+    }, 5000); 
+
     audio.onloadedmetadata = () => {
+      clearTimeout(timer);
       resolve(audio.duration);
     };
     audio.onerror = (e) => {
+      clearTimeout(timer);
       console.error("Error loading audio metadata:", e);
       reject(new Error('Failed to load audio metadata.'));
     };
-    // Timeout if metadata doesn't load quickly, e.g., for very short/empty files
-    setTimeout(() => {
-        if (audio.duration === 0 || isNaN(audio.duration)) { // Check if duration is still not set
-             console.warn("Audio metadata load timeout or invalid duration. Defaulting.");
-            resolve(30); // Fallback duration
-        }
-    }, 5000); // 5 second timeout
   });
 };
 
@@ -58,7 +61,7 @@ export default function GeneratePage() {
   const [isRendering, setIsRendering] = useState(false);
   const [remotionProps, setRemotionProps] = useState<CompositionProps | null>(null);
   const [playerDurationInFrames, setPlayerDurationInFrames] = useState<number>(300); 
-  const [formValues, setFormValues] = useState<VideoFormValues | null>(null); // Store form values for saving
+  const [formValues, setFormValues] = useState<VideoFormValues | null>(null); 
 
   const defaultPrimaryColor = myVideoSchema.shape.primaryColor.parse(undefined);
   const defaultSecondaryColor = myVideoSchema.shape.secondaryColor.parse(undefined);
@@ -76,15 +79,15 @@ export default function GeneratePage() {
     setGeneratedAudioUri(null);
     setGeneratedCaptions(null);
     setRemotionProps(null);
-    setFormValues(data); // Store form data for saving later
-    setPlayerDurationInFrames(300);
+    setFormValues(data); 
+    setPlayerDurationInFrames(300); 
 
     let currentScript: GenerateVideoScriptOutput | null = null;
     let currentImageUrls: string[] = [];
     let currentAudioUri: string | null = null;
     let currentCaptions: string | null = null;
     let finalSceneDurationInFrames = data.imageDurationInFrames || defaultImageDurationInFramesHint;
-    let totalVideoDurationInFramesCalculated = 300; // Default
+    let totalVideoDurationInFramesCalculated = 300;
 
     try {
       setLoadingStep('Generating script...');
@@ -117,23 +120,23 @@ export default function GeneratePage() {
 
       setLoadingStep('Measuring audio duration...');
       toast({ title: 'Analyzing audio...', description: 'Calculating video timing.'});
-      let actualAudioDurationInSeconds = 30;
+      let actualAudioDurationInSeconds = 30; // Default
       try {
         actualAudioDurationInSeconds = await getAudioDuration(currentAudioUri);
       } catch (audioError: any) {
         console.warn("Could not measure audio duration:", audioError.message);
-        toast({title: "Audio Duration Warning", description: "Using estimated timing.", variant: "destructive"});
+        toast({title: "Audio Duration Warning", description: "Using estimated timing. Video sync might be affected.", variant: "destructive"});
       }
       
       totalVideoDurationInFramesCalculated = Math.ceil(actualAudioDurationInSeconds * 30);
       finalSceneDurationInFrames = Math.max(30, Math.ceil(totalVideoDurationInFramesCalculated / currentScript.scenes.length));
-      setPlayerDurationInFrames(totalVideoDurationInFramesCalculated);
+      setPlayerDurationInFrames(totalVideoDurationInFramesCalculated); // Update player duration
       toast({ title: 'Video timing set!', description: `Video: ${actualAudioDurationInSeconds.toFixed(1)}s. Scenes: ${currentScript.scenes.length} x ~${(finalSceneDurationInFrames/30).toFixed(1)}s.` });
       
       setLoadingStep('Generating captions...');
       toast({ title: 'Generating captions...', description: 'Using AssemblyAI.' });
       const captionsResult = await generateCaptionsAction({ audioDataUri: currentAudioUri });
-      if (!captionsResult.transcript) throw new Error('Caption generation failed.');
+      if (!captionsResult.transcript && captionsResult.transcript !== "") throw new Error('Caption generation failed or returned no transcript.');
       currentCaptions = captionsResult.transcript;
       setGeneratedCaptions(currentCaptions);
       toast({ title: 'Captions generated!' });
@@ -171,7 +174,6 @@ export default function GeneratePage() {
       };
       setRemotionProps(currentRemotionProps);
 
-      // Save video metadata to Firestore
       setLoadingStep('Saving video details...');
       const videoToSave: Omit<VideoDocument, 'id' | 'createdAt'> = {
         userId: user.uid,
@@ -227,6 +229,8 @@ export default function GeneratePage() {
         inputProps: { 
             ...remotionProps,
         },
+        // Pass the calculated total duration here for the renderer
+        totalDurationInFrames: playerDurationInFrames,
       });
       toast({ title: 'Video Rendered!', description: 'Download should start automatically.' });
     } catch (error: any) {
@@ -238,17 +242,17 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Create New Video</h1>
-        <p className="text-muted-foreground">Fill in the details to generate your AI video.</p>
+        <h1 className="text-2xl sm:text-3xl font-headline font-bold">Create New Video</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Fill in the details to generate your AI video.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
         <Card className="md:col-span-1">
           <CardHeader>
-            <CardTitle>Video Settings</CardTitle>
-            <CardDescription>Describe your desired video.</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Video Settings</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Describe your desired video.</CardDescription>
           </CardHeader>
           <CardContent>
             <VideoForm
@@ -270,21 +274,21 @@ export default function GeneratePage() {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Preview & Results</CardTitle>
-            <CardDescription>Generated content and video preview will appear here.</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Preview & Results</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Generated content and video preview will appear here.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             {isLoading && (
-              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px]">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground font-semibold">{loadingStep || 'Generating...'}</p>
-                <p className="text-sm text-muted-foreground mt-2">Script, audio, captions, and images can take time.</p>
+              <div className="flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-lg min-h-[250px] sm:min-h-[300px]">
+                <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-primary mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-muted-foreground font-semibold">{loadingStep || 'Generating...'}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2 text-center">Script, audio, captions, and images can take time.</p>
               </div>
             )}
 
             {!isLoading && remotionProps && (
               <>
-                <div className="aspect-video bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[320px] mx-auto" style={{ aspectRatio: '9/16', height: 'auto' }}>
+                <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] sm:max-w-[320px] mx-auto" style={{ aspectRatio: '9/16', height: 'auto' }}>
                    <RemotionPlayer
                     key={JSON.stringify(remotionProps) + playerDurationInFrames} 
                     compositionId="MyVideo"
@@ -304,34 +308,34 @@ export default function GeneratePage() {
             )}
 
             {!isLoading && !remotionProps && !scriptResult && ( 
-                 <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px] bg-muted/50">
-                    <Film className="h-16 w-16 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Your video preview will appear here.</p>
-                    <p className="text-sm text-muted-foreground mt-1">Fill form and click "Generate Video Content".</p>
+                 <div className="flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-lg min-h-[250px] sm:min-h-[300px] bg-muted/50">
+                    <Film className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-3 sm:mb-4" />
+                    <p className="text-sm sm:text-base text-muted-foreground">Your video preview will appear here.</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 text-center">Fill form and click "Generate Video Content".</p>
                  </div>
             )}
 
             {!isLoading && !remotionProps && scriptResult && ( 
-                 <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg min-h-[300px] bg-destructive/10 text-destructive-foreground">
-                    <AlertTriangle className="h-16 w-16 mb-4" />
-                    <p className="font-semibold">Preview Unavailable</p>
-                    <p className="text-sm mt-1 text-center">Assets might have failed to generate. Check results below or console.</p>
+                 <div className="flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-lg min-h-[250px] sm:min-h-[300px] bg-destructive/10 text-destructive-foreground">
+                    <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-4" />
+                    <p className="font-semibold text-sm sm:text-base">Preview Unavailable</p>
+                    <p className="text-xs sm:text-sm mt-1 text-center">Assets might have failed to generate. Check results below or console.</p>
                  </div>
             )}
 
 
             {scriptResult && (
               <Card className="bg-card/70">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl font-headline flex items-center">
-                    <FileText className="mr-2 h-5 w-5 text-accent" />
+                <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+                  <CardTitle className="text-md sm:text-xl font-headline flex items-center">
+                    <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                     Script: {scriptResult.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm space-y-3 max-h-60 overflow-y-auto">
+                <CardContent className="text-xs sm:text-sm space-y-2 sm:space-y-3 max-h-60 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
                   {scriptResult.scenes.map((scene, index) => (
-                    <div key={index} className="p-3 border rounded-md bg-background/50 shadow-sm">
-                      <h4 className="font-semibold text-primary">Scene {index + 1}</h4>
+                    <div key={index} className="p-2 sm:p-3 border rounded-md bg-background/50 shadow-sm">
+                      <h4 className="font-semibold text-primary text-sm">Scene {index + 1}</h4>
                       <p className="mt-1"><strong className="font-medium text-muted-foreground">Visual:</strong> {scene.imagePrompt}</p>
                       <p className="mt-1"><strong className="font-medium text-muted-foreground">Text:</strong> {scene.contentText}</p>
                     </div>
@@ -342,14 +346,14 @@ export default function GeneratePage() {
 
              {generatedImages && generatedImages.length > 0 && (
               <Card className="bg-card/70">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-xl font-headline flex items-center">
-                        <ImageIcon className="mr-2 h-5 w-5 text-accent" />
+                <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+                    <CardTitle className="text-md sm:text-xl font-headline flex items-center">
+                        <ImageIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                         Images ({generatedImages.length})
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+                    <div className="mt-2 grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                     {generatedImages.map((imgUrl, index) => (
                         <div key={index} className="relative aspect-[9/16] rounded-md overflow-hidden shadow-lg">
                         <img
@@ -358,7 +362,7 @@ export default function GeneratePage() {
                             className="absolute inset-0 w-full h-full object-cover"
                              data-ai-hint={scriptResult?.scenes[index]?.imagePrompt.substring(0,50) || "generated image"}
                         />
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">Scene {index + 1}</div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[0.6rem] xs:text-xs p-1 text-center truncate">Scene {index + 1}</div>
                         </div>
                     ))}
                     </div>
@@ -367,31 +371,31 @@ export default function GeneratePage() {
             )}
             {generatedAudioUri && (
                 <Card className="bg-card/70">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xl font-headline flex items-center">
-                            <Mic className="mr-2 h-5 w-5 text-accent" />
+                    <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+                        <CardTitle className="text-md sm:text-xl font-headline flex items-center">
+                            <Mic className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                             Voiceover
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
                         <audio controls src={generatedAudioUri} className="w-full">
                             Your browser does not support the audio element.
                         </audio>
-                        <p className="text-xs text-muted-foreground mt-2">Voiceover by ElevenLabs.</p>
+                        <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Voiceover by ElevenLabs.</p>
                     </CardContent>
                 </Card>
             )}
              {generatedCaptions && (
                 <Card className="bg-card/70">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xl font-headline flex items-center">
-                            <TypeIcon className="mr-2 h-5 w-5 text-accent" />
+                    <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+                        <CardTitle className="text-md sm:text-xl font-headline flex items-center">
+                            <TypeIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                             Transcript
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-sm max-h-40 overflow-y-auto">
+                    <CardContent className="text-xs sm:text-sm max-h-40 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
                         <p className="whitespace-pre-wrap">{generatedCaptions}</p>
-                        <p className="text-xs text-muted-foreground mt-2">Transcript by AssemblyAI.</p>
+                        <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Transcript by AssemblyAI.</p>
                     </CardContent>
                 </Card>
             )}
@@ -401,4 +405,3 @@ export default function GeneratePage() {
     </div>
   );
 }
-

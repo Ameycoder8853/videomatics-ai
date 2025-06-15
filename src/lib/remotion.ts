@@ -10,9 +10,10 @@ interface RenderParams {
   compositionId: string;
   inputProps: CompositionProps; 
   onProgress?: RenderMediaOnProgress;
+  totalDurationInFrames: number; // Add this to accept dynamic total duration
 }
 
-export const handleClientSideRender = async ({ compositionId, inputProps, onProgress }: RenderParams): Promise<void> => {
+export const handleClientSideRender = async ({ compositionId, inputProps, onProgress, totalDurationInFrames }: RenderParams): Promise<void> => {
   try {
     const compositions = await getCompositions(RemotionRoot, {
       inputProps: inputProps, 
@@ -23,45 +24,14 @@ export const handleClientSideRender = async ({ compositionId, inputProps, onProg
       throw new Error(`Composition with ID '${compositionId}' not found.`);
     }
 
-    // Calculate dynamic total duration for rendering based on inputProps
-    // This should match how it's calculated for the player in generate/page.tsx
-    let actualTotalDurationInFrames = compositionInfo.durationInFrames; // Fallback to composition default
-    
-    if (inputProps.audioUri && typeof window !== 'undefined') {
-        // Attempt to measure audio for accurate duration, similar to generate page
-        // This is a simplified version, assumes audioUri is a data URI or resolvable URL
-        try {
-            const audio = new Audio(inputProps.audioUri);
-            await new Promise<void>((resolve, reject) => {
-                audio.onloadedmetadata = () => {
-                    actualTotalDurationInFrames = Math.ceil(audio.duration * (compositionInfo.fps || 30));
-                    console.log("handleClientSideRender: Measured audio, total render duration frames:", actualTotalDurationInFrames);
-                    resolve();
-                };
-                audio.onerror = () => {
-                    console.warn("handleClientSideRender: Could not load audio metadata for duration calculation during render. Using composition default.");
-                    resolve(); // Resolve anyway to not block rendering, will use default.
-                };
-                 // Timeout if metadata doesn't load quickly
-                setTimeout(() => {
-                    console.warn("handleClientSideRender: Audio metadata load timeout. Using composition default duration.");
-                    resolve();
-                }, 5000); // 5 second timeout
-            });
-        } catch (e) {
-            console.warn("handleClientSideRender: Error in audio duration measurement during render:", e);
-        }
-    } else if (inputProps.sceneTexts && inputProps.imageDurationInFrames) {
-        // Fallback if audioUri is not available or in non-browser (should not happen for client render)
-        actualTotalDurationInFrames = inputProps.sceneTexts.length * inputProps.imageDurationInFrames;
-        console.log("handleClientSideRender: Calculated from scenes, total render duration frames:", actualTotalDurationInFrames);
-    }
-
+    // The totalDurationInFrames is now passed directly, ensuring it matches player
+    const finalDurationForRender = totalDurationInFrames;
+    console.log("handleClientSideRender: Using passed totalDurationInFrames for render:", finalDurationForRender);
 
     console.log("Final input props for renderMedia:", inputProps);
     console.log("Final composition for renderMedia:", {
         ...compositionInfo,
-        durationInFrames: actualTotalDurationInFrames, // Override with calculated total duration
+        durationInFrames: finalDurationForRender, // Override with calculated total duration
         props: inputProps,
     });
 
@@ -69,10 +39,9 @@ export const handleClientSideRender = async ({ compositionId, inputProps, onProg
     const blob = await renderMedia({
       composition: {
         ...compositionInfo,
-        durationInFrames: actualTotalDurationInFrames, // Crucial: Use the dynamically calculated total duration
-        props: inputProps, // Pass the full inputProps, including dynamic imageDurationInFrames (scene duration)
+        durationInFrames: finalDurationForRender, 
+        props: inputProps, 
       },
-      // inputProps: inputProps, // Already part of composition.props
       codec: 'h264',
       imageFormat: 'jpeg',
       outputFormat: 'mp4',
@@ -85,7 +54,7 @@ export const handleClientSideRender = async ({ compositionId, inputProps, onProg
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${compositionId}-${Date.now()}.mp4`;
+    a.download = `${inputProps.title || compositionId}-${Date.now()}.mp4`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
