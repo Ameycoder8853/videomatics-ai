@@ -137,10 +137,13 @@ export default function GeneratePage() {
       setLoadingStep('Generating captions...');
       toast({ title: 'Generating captions...', description: 'Using AssemblyAI.' });
       const captionsResult = await generateCaptionsAction({ audioDataUri: localAudioUri });
-      if (!captionsResult.transcript && captionsResult.transcript !== "") throw new Error('Caption generation failed or returned no transcript.');
       localCaptions = captionsResult.transcript;
       setGeneratedCaptions(localCaptions);
-      toast({ title: 'Captions generated!' });
+      if (localCaptions) {
+        toast({ title: 'Captions generated!' });
+      } else {
+        toast({ title: 'Captions Skipped', description: 'AssemblyAI API key not configured.', variant: 'default' });
+      }
 
       const imagePrompts = currentScript.scenes.map(scene => scene.imagePrompt);
       if (imagePrompts.length === 0) throw new Error('No image prompts in script.');
@@ -426,7 +429,7 @@ export default function GeneratePage() {
                     </CardContent>
                 </Card>
             )}
-             {generatedCaptions && (
+             {generatedCaptions !== null && (
                 <Card className="bg-card/70">
                     <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
                         <CardTitle className="text-md sm:text-xl font-headline flex items-center">
@@ -435,8 +438,14 @@ export default function GeneratePage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="text-xs sm:text-sm max-h-40 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
-                        <p className="whitespace-pre-wrap">{generatedCaptions}</p>
-                        <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Transcript by AssemblyAI.</p>
+                        {generatedCaptions ? (
+                            <>
+                                <p className="whitespace-pre-wrap">{generatedCaptions}</p>
+                                <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Transcript by AssemblyAI.</p>
+                            </>
+                        ) : (
+                            <p className="text-muted-foreground">Captions were skipped (API key may be missing).</p>
+                        )}
                     </CardContent>
                 </Card>
             )}

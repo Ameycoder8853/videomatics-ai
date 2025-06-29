@@ -1,3 +1,4 @@
+
 import { storage } from './config';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
@@ -30,11 +31,17 @@ export const uploadBlobToStorage = async (blob: Blob, path: string, metadata?: o
 // NEW: Function to upload a data URI by converting it to a blob first
 export const uploadDataUriToStorage = async (dataUri: string, path: string): Promise<string> => {
     try {
+        console.log(`Starting upload to: ${path}`);
         const response = await fetch(dataUri);
+        console.log(`Fetched data URI for ${path}, creating blob...`);
         const blob = await response.blob();
+        console.log(`Blob created for ${path} (size: ${blob.size}, type: ${blob.type}), creating storage ref...`);
         const storageRef = ref(storage, path);
+        console.log(`Storage ref created for ${path}, uploading bytes...`);
         const snapshot = await uploadBytes(storageRef, blob, { contentType: blob.type });
+        console.log(`Upload successful for ${path}, getting download URL...`);
         const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log(`Got download URL for ${path}`);
         return downloadURL;
     } catch (error) {
         console.error(`Error uploading data URI to ${path}:`, error);

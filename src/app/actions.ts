@@ -50,7 +50,7 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
       console.log(`Generating image ${i + 1} of ${promptsToProcess.length} with prompt: "${imagePrompt}"`);
       try {
         const {media} = await ai.generate({
-          model: 'googleai/gemini-2.0-flash-exp',
+          model: 'googleai/gemini-2.0-flash-preview-image-generation',
           prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: "${imagePrompt}". The image should be in portrait orientation (1080x1920). Ensure it is safe for all audiences.`,
           config: {
             responseModalities: ['TEXT', 'IMAGE'],
@@ -182,11 +182,12 @@ interface GenerateCaptionsOutput {
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
-    console.error('AssemblyAI API key is not set in environment variables.');
-    throw new Error('AssemblyAI API key is missing. Cannot generate captions.');
+    console.warn('AssemblyAI API key is not set. Skipping caption generation. Please add ASSEMBLYAI_API_KEY to your .env file.');
+    return { transcript: "" }; // Return empty transcript instead of throwing an error
   }
    if (!input.audioDataUri || !input.audioDataUri.startsWith('data:audio')) {
     console.error('Invalid audioDataUri for caption generation.');
+    // Still throw here, because this is a developer error, not a config error
     throw new Error('Valid audio data URI is required for caption generation.');
   }
 
