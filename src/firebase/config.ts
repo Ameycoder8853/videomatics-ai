@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -21,7 +21,12 @@ if (!getApps().length) {
 }
 
 const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app);
+// Explicitly initialize Firestore with settings to improve network compatibility
+const db: Firestore = initializeFirestore(app, {
+  experimentalForceLongPolling: true, // Use a more compatible connection strategy
+  experimentalUseFetchStreams: false, // Disable fetch streams which can cause issues in some environments
+  ignoreUndefinedProperties: true, // Good practice to prevent errors with undefined fields
+});
 const storage: FirebaseStorage = getStorage(app);
 
 export { app, auth, db, storage };
