@@ -22,7 +22,13 @@ export default function DashboardPage() {
       setIsLoading(true);
       getUserVideos(user.uid)
         .then(fetchedVideos => {
-          setVideos(fetchedVideos.map(v => ({
+          // Sort videos client-side to avoid Firestore index requirements
+          const sortedVideos = fetchedVideos.sort((a, b) => {
+            const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : new Date(a.createdAt as any).getTime();
+            const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : new Date(b.createdAt as any).getTime();
+            return dateB - dateA;
+          });
+          setVideos(sortedVideos.map(v => ({
             ...v,
             createdAt: v.createdAt instanceof Timestamp ? v.createdAt.toDate() : new Date(v.createdAt as any),
           })) as VideoDocument[]);

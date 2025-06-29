@@ -70,7 +70,7 @@ export const updateVideoDocument = async (videoId: string, videoData: Partial<Om
 // Get all videos for a specific user, ordered by creation date (newest first)
 export const getUserVideos = async (userId: string): Promise<VideoDocument[]> => {
   try {
-    const q = query(videosCollection, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const q = query(videosCollection, where('userId', '==', userId));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VideoDocument));
   } catch (error) {
