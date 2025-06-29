@@ -109,19 +109,21 @@ export const deleteVideoAndAssets = async (video: VideoDocument): Promise<void> 
   try {
     // Delete images from Storage in parallel
     if (imageUris && imageUris.length > 0) {
-      console.log(`Deleting ${imageUris.length} images...`);
+      console.log(`Deleting up to ${imageUris.length} images...`);
       const imageDeletePromises = imageUris.map((url, index) => {
-        // We can't reliably get the path from the download URL, so we construct it.
-        // This assumes a consistent path structure was used for uploads.
-        const imagePath = `videos/${userId}/${videoId}/image_${index}.png`;
-        return deleteFileFromStorage(imagePath);
+        // Only attempt to delete files that were actually uploaded to Firebase Storage
+        if (url.includes('firebasestorage.googleapis.com')) {
+          const imagePath = `videos/${userId}/${videoId}/image_${index}.png`;
+          return deleteFileFromStorage(imagePath);
+        }
+        return Promise.resolve(); // Do nothing for placeholder URLs
       });
       await Promise.all(imageDeletePromises);
-       console.log("Images deleted from Storage.");
+       console.log("Image deletion process completed.");
     }
     
     // Delete audio from Storage
-    if (audioUri) {
+    if (audioUri && audioUri.includes('firebasestorage.googleapis.com')) {
         console.log("Deleting audio...");
         const audioPath = `videos/${userId}/${videoId}/audio.wav`;
         await deleteFileFromStorage(audioPath);
