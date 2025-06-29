@@ -3,6 +3,8 @@
 
 import { generateVideoScript as genVideoScriptFlow, GenerateVideoScriptInput, GenerateVideoScriptOutput } from '@/ai/flows/generate-video-script';
 import { ai } from '@/ai/genkit';
+import wav from 'wav';
+
 
 // Action to generate video script
 export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
@@ -97,82 +99,76 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
 
 interface GenerateAudioInput {
   text: string;
-  voiceId?: string;
 }
 interface GenerateAudioOutput {
-  audioUrl: string; // This will be a data URI
+  audioUrl: string; // This will be a WAV data URI
 }
-export async function generateAudioAction(input: GenerateAudioInput): Promise<GenerateAudioOutput> {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) {
-    console.error('ElevenLabs API key is not set in environment variables.');
-    throw new Error('ElevenLabs API key is missing. Cannot generate audio.');
-  }
 
-  const voiceId = input.voiceId || '21m00Tcm4TlvDq8ikWAM'; 
-  const modelId = 'eleven_multilingual_v2';
-  const ttsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
-
-  console.log(`Generating audio with ElevenLabs for text: "${input.text.substring(0, 100)}..."`);
-
-  try {
-    const response = await fetch(ttsUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        text: input.text,
-        model_id: modelId,
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.2,
-          use_speaker_boost: true
-        },
-      }),
+// Helper to convert raw PCM audio data from Gemini to a WAV file buffer
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000, // Gemini TTS default sample rate
+  sampleWidth = 2 // 16-bit audio
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
     });
 
-    if (!response.ok) {
-      let errorBodyText = 'Could not retrieve error body from ElevenLabs.';
-      try {
-        errorBodyText = await response.text();
-      } catch (e) {
-        console.error('Failed to read error body from ElevenLabs response:', e);
-      }
-      console.error('ElevenLabs API Error:', response.status, errorBodyText);
-      throw new Error(`ElevenLabs API request failed with status ${response.status}: ${errorBodyText}`);
+    const bufs: Buffer[] = [];
+    writer.on('error', reject);
+    writer.on('data', function (d: Buffer) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
+export async function generateAudioAction(input: GenerateAudioInput): Promise<GenerateAudioOutput> {
+  try {
+    console.log(`Generating audio with Gemini TTS for text: "${input.text.substring(0, 100)}..."`);
+    const { media } = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-preview-tts',
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            // See available voices here: https://cloud.google.com/text-to-speech/docs/voices
+            prebuiltVoiceConfig: { voiceName: 'Algenib' }, 
+          },
+        },
+      },
+      prompt: input.text,
+    });
+
+    if (!media || !media.url) {
+      throw new Error('AI failed to generate audio or returned an invalid response.');
     }
+
+    // media.url is a data URI with base64 encoded raw PCM audio data.
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
     
-    let audioDataUri: string;
-    try {
-        const audioBlob = await response.blob();
-        if (!audioBlob.type.startsWith('audio/')) { // More generic check for audio type
-            let responseText = "Could not read non-audio response as text.";
-            try {
-              responseText = await audioBlob.text();
-            } catch(e) {
-              console.error("Error reading non-audio response body: ", e)
-            }
-            console.error('ElevenLabs did not return audio. Response Content-Type:', audioBlob.type, 'Response Text:', responseText.substring(0,200));
-            throw new Error(`ElevenLabs returned non-audio content type: ${audioBlob.type}. Response: ${responseText.substring(0,100)}`);
-        }
-        const buffer = await audioBlob.arrayBuffer();
-        const base64Audio = Buffer.from(buffer).toString('base64');
-        audioDataUri = `data:${audioBlob.type};base64,${base64Audio}`;
-    } catch (e: any) {
-        console.error('Error processing ElevenLabs audio blob:', e);
-        throw new Error(`Failed to process audio data from ElevenLabs: ${e.message}`);
-    }
-    
-    console.log('Audio generated successfully from ElevenLabs.');
-    return { audioUrl: audioDataUri };
+    // Convert PCM to WAV so it's playable in browsers
+    const wavBase64 = await toWav(audioBuffer);
+    const wavDataUri = `data:audio/wav;base64,${wavBase64}`;
+
+    console.log('Audio generated and converted to WAV successfully.');
+    return { audioUrl: wavDataUri };
 
   } catch (error: any) {
-    console.error('Error in generateAudioAction (ElevenLabs):', error);
-    throw new Error(`Audio generation failed: ${error.message || 'Unknown error contacting ElevenLabs'}`);
+    console.error('Error in generateAudioAction (Gemini TTS):', error);
+    throw new Error(`Audio generation failed: ${error.message || 'Unknown error contacting Gemini TTS'}`);
   }
 }
 

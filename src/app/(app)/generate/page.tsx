@@ -111,7 +111,7 @@ export default function GeneratePage() {
       if (!fullScriptText.trim()) throw new Error('Script content is empty, cannot generate audio.');
 
       setLoadingStep('Generating voiceover audio...');
-      toast({ title: 'Generating voiceover...', description: 'Using ElevenLabs.' });
+      toast({ title: 'Generating voiceover...', description: 'Using Google AI.' });
       const audioResult = await generateAudioAction({ text: fullScriptText });
       if (!audioResult.audioUrl) throw new Error('Audio generation failed.');
       currentAudioUri = audioResult.audioUrl;
@@ -381,7 +381,7 @@ export default function GeneratePage() {
                         <audio controls src={generatedAudioUri} className="w-full">
                             Your browser does not support the audio element.
                         </audio>
-                        <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Voiceover by ElevenLabs.</p>
+                        <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Voiceover by Google AI.</p>
                     </CardContent>
                 </Card>
             )}
