@@ -9,7 +9,7 @@ import { ArrowLeft, Download, Trash2, Loader2, AlertTriangle, Info, Image as Ima
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import type { CompositionProps } from '@/remotion/MyVideo';
 import { useEffect, useState } from 'react';
-import { getVideoDocument, VideoDocument, deleteVideoDocument } from '@/firebase/firestore';
+import { getVideoDocument, VideoDocument, deleteVideoAndAssets } from '@/firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { handleClientSideRender } from '@/lib/remotion';
@@ -102,9 +102,9 @@ export default function VideoDetailPage() {
         return;
     }
     setIsDeleting(true);
-    toast({title: "Deleting video..."});
+    toast({title: "Deleting video and associated assets..."});
     try {
-        await deleteVideoDocument(video.id);
+        await deleteVideoAndAssets(video);
         toast({ title: "Video Deleted", description: `"${video.title}" has been removed.`, variant: "default" });
         router.push('/dashboard');
     } catch (error: any) {
@@ -184,7 +184,7 @@ export default function VideoDetailPage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the video titled "{video.title || 'this video'}".
+                        This action cannot be undone. This will permanently delete the video titled "{video.title || 'this video'}" and all its assets from storage.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

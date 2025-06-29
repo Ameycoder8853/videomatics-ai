@@ -27,6 +27,21 @@ export const uploadBlobToStorage = async (blob: Blob, path: string, metadata?: o
   }
 };
 
+// NEW: Function to upload a data URI by converting it to a blob first
+export const uploadDataUriToStorage = async (dataUri: string, path: string): Promise<string> => {
+    try {
+        const response = await fetch(dataUri);
+        const blob = await response.blob();
+        const storageRef = ref(storage, path);
+        const snapshot = await uploadBytes(storageRef, blob, { contentType: blob.type });
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
+    } catch (error) {
+        console.error(`Error uploading data URI to ${path}:`, error);
+        throw error;
+    }
+};
+
 
 // Function to delete a file
 export const deleteFileFromStorage = async (path: string): Promise<void> => {
@@ -34,14 +49,12 @@ export const deleteFileFromStorage = async (path: string): Promise<void> => {
     const storageRef = ref(storage, path);
     await deleteObject(storageRef);
   } catch (error) {
-    console.error("Error deleting file: ", error);
-    // Handle specific errors, e.g., object not found
+    // Handle specific errors, e.g., object not found is not a failure in this context
     if ((error as any).code === 'storage/object-not-found') {
-      console.warn(`File not found at path: ${path}`);
+      console.warn(`File to delete was not found at path: ${path}`);
     } else {
+      console.error(`Error deleting file from ${path}:`, error);
       throw error;
     }
   }
 };
-
-// Add other storage functions as needed.

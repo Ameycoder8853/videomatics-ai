@@ -1,7 +1,9 @@
 
-import { db } from './config';
+import { db, storage } from './config';
 import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where, Timestamp, orderBy } from 'firebase/firestore';
 import type { GenerateVideoScriptOutput } from '@/ai/flows/generate-video-script';
+import { deleteFileFromStorage } from './storage';
+import { ref } from 'firebase/storage';
 
 // Interface for a Video document stored in Firestore
 export interface VideoDocument {
@@ -15,9 +17,9 @@ export interface VideoDocument {
   // Generated script details
   scriptDetails?: GenerateVideoScriptOutput; // Contains title and scenes array
 
-  // URIs for generated assets
-  imageUris: string[]; // Array of generated image data URIs
-  audioUri: string; // Generated audio data URI
+  // URLs for generated assets stored in Firebase Storage
+  imageUris: string[]; // Array of generated image download URLs
+  audioUri: string; // Generated audio download URL
   captions?: string; // Generated captions text
   musicUri?: string; // Selected background music URI
 
@@ -29,26 +31,40 @@ export interface VideoDocument {
   totalDurationInFrames: number; // Total video duration
 
   status: 'pending' | 'processing' | 'completed' | 'failed';
-  createdAt: Timestamp;
+  createdAt: Timestamp | Date;
   thumbnailUrl?: string; // URL of the first image, for display
   errorMessage?: string; // Optional: if status is 'failed'
 }
 
 const videosCollection = collection(db, 'videos');
 
-// Save video metadata to Firestore
-export const saveVideoMetadata = async (videoData: Omit<VideoDocument, 'id' | 'createdAt'>): Promise<string> => {
+// Create a placeholder document to get an ID before assets are uploaded.
+export const createVideoPlaceholder = async (userId: string): Promise<string> => {
   try {
     const docRef = await addDoc(videosCollection, {
-      ...videoData,
+      userId: userId,
+      status: 'processing',
       createdAt: Timestamp.now(),
+      title: 'Processing...', // Placeholder title
     });
-    console.log("Video metadata saved with ID: ", docRef.id);
+    console.log("Video placeholder created with ID: ", docRef.id);
     return docRef.id;
   } catch (error) {
-    console.error("Error saving video metadata: ", error);
+    console.error("Error creating video placeholder: ", error);
     throw error;
   }
+};
+
+// Update video document with all metadata after assets are uploaded
+export const updateVideoDocument = async (videoId: string, videoData: Partial<Omit<VideoDocument, 'id' | 'createdAt'>>): Promise<void> => {
+    try {
+        const docRef = doc(db, 'videos', videoId);
+        await updateDoc(docRef, videoData);
+        console.log("Video document updated for ID: ", videoId);
+    } catch (error) {
+        console.error("Error updating video document: ", error);
+        throw error;
+    }
 };
 
 // Get all videos for a specific user, ordered by creation date (newest first)
@@ -80,30 +96,45 @@ export const getVideoDocument = async (videoId: string): Promise<VideoDocument |
   }
 };
 
-// Update a video document (e.g., to change status)
-export const updateVideoStatus = async (videoId: string, status: VideoDocument['status'], errorMessage?: string): Promise<void> => {
-  try {
-    const docRef = doc(db, 'videos', videoId);
-    const updateData: Partial<VideoDocument> = { status };
-    if (errorMessage) {
-      updateData.errorMessage = errorMessage;
-    }
-    await updateDoc(docRef, updateData);
-    console.log("Video status updated for ID: ", videoId);
-  } catch (error) {
-    console.error("Error updating video status: ", error);
-    throw error;
-  }
-};
 
-// Delete a video document
-export const deleteVideoDocument = async (videoId: string): Promise<void> => {
+// Delete a video document AND its associated files in Storage
+export const deleteVideoAndAssets = async (video: VideoDocument): Promise<void> => {
+  if (!video.id || !video.userId) {
+    throw new Error('Cannot delete video without ID or UserID');
+  }
+
+  const { id: videoId, userId, imageUris, audioUri } = video;
+  console.log(`Starting deletion for video ${videoId}...`);
+
   try {
+    // Delete images from Storage in parallel
+    if (imageUris && imageUris.length > 0) {
+      console.log(`Deleting ${imageUris.length} images...`);
+      const imageDeletePromises = imageUris.map((url, index) => {
+        // We can't reliably get the path from the download URL, so we construct it.
+        // This assumes a consistent path structure was used for uploads.
+        const imagePath = `videos/${userId}/${videoId}/image_${index}.png`;
+        return deleteFileFromStorage(imagePath);
+      });
+      await Promise.all(imageDeletePromises);
+       console.log("Images deleted from Storage.");
+    }
+    
+    // Delete audio from Storage
+    if (audioUri) {
+        console.log("Deleting audio...");
+        const audioPath = `videos/${userId}/${videoId}/audio.wav`;
+        await deleteFileFromStorage(audioPath);
+        console.log("Audio deleted from Storage.");
+    }
+
+    // Finally, delete the Firestore document
     const docRef = doc(db, 'videos', videoId);
     await deleteDoc(docRef);
-    console.log("Video document deleted with ID: ", videoId);
+    console.log(`Firestore document ${videoId} deleted.`);
+
   } catch (error) {
-    console.error("Error deleting video document: ", error);
+    console.error(`Error during deletion of video ${videoId}:`, error);
     throw error;
   }
 };

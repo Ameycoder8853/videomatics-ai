@@ -15,8 +15,8 @@ import type { CompositionProps } from '@/remotion/MyVideo';
 import { myVideoSchema } from '@/remotion/MyVideo';
 import { staticFile } from 'remotion';
 import { useAuth } from '@/contexts/AuthContext';
-import { saveVideoMetadata, VideoDocument } from '@/firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
+import { createVideoPlaceholder, updateVideoDocument, VideoDocument } from '@/firebase/firestore';
+import { uploadDataUriToStorage } from '@/firebase/storage';
 
 
 const getAudioDuration = (audioDataUri: string): Promise<number> => {
@@ -83,9 +83,9 @@ export default function GeneratePage() {
     setPlayerDurationInFrames(300); 
 
     let currentScript: GenerateVideoScriptOutput | null = null;
-    let currentImageUrls: string[] = [];
-    let currentAudioUri: string | null = null;
-    let currentCaptions: string | null = null;
+    let localImageUris: string[] = [];
+    let localAudioUri: string | null = null;
+    let localCaptions: string | null = null;
     let finalSceneDurationInFrames = data.imageDurationInFrames || defaultImageDurationInFramesHint;
     let totalVideoDurationInFramesCalculated = 300;
 
@@ -114,15 +114,15 @@ export default function GeneratePage() {
       toast({ title: 'Generating voiceover...', description: 'Using Google AI.' });
       const audioResult = await generateAudioAction({ text: fullScriptText });
       if (!audioResult.audioUrl) throw new Error('Audio generation failed.');
-      currentAudioUri = audioResult.audioUrl;
-      setGeneratedAudioUri(currentAudioUri);
+      localAudioUri = audioResult.audioUrl;
+      setGeneratedAudioUri(localAudioUri);
       toast({ title: 'Voiceover audio generated!' });
 
       setLoadingStep('Measuring audio duration...');
       toast({ title: 'Analyzing audio...', description: 'Calculating video timing.'});
       let actualAudioDurationInSeconds = 30; // Default
       try {
-        actualAudioDurationInSeconds = await getAudioDuration(currentAudioUri);
+        actualAudioDurationInSeconds = await getAudioDuration(localAudioUri);
       } catch (audioError: any) {
         console.warn("Could not measure audio duration:", audioError.message);
         toast({title: "Audio Duration Warning", description: "Using estimated timing. Video sync might be affected.", variant: "destructive"});
@@ -135,10 +135,10 @@ export default function GeneratePage() {
       
       setLoadingStep('Generating captions...');
       toast({ title: 'Generating captions...', description: 'Using AssemblyAI.' });
-      const captionsResult = await generateCaptionsAction({ audioDataUri: currentAudioUri });
+      const captionsResult = await generateCaptionsAction({ audioDataUri: localAudioUri });
       if (!captionsResult.transcript && captionsResult.transcript !== "") throw new Error('Caption generation failed or returned no transcript.');
-      currentCaptions = captionsResult.transcript;
-      setGeneratedCaptions(currentCaptions);
+      localCaptions = captionsResult.transcript;
+      setGeneratedCaptions(localCaptions);
       toast({ title: 'Captions generated!' });
 
       const imagePrompts = currentScript.scenes.map(scene => scene.imagePrompt);
@@ -148,25 +148,25 @@ export default function GeneratePage() {
       toast({ title: `Generating ${imagePrompts.length} images...`, description: 'This may take moments.' });
       const imagesResult = await generateImagesAction({ prompts: imagePrompts });
       if (!imagesResult.imageUrls || imagesResult.imageUrls.length !== imagePrompts.length) {
-        currentImageUrls = imagesResult.imageUrls || [];
-        while (currentImageUrls.length < imagePrompts.length) {
-            currentImageUrls.push('https://placehold.co/1080x1920.png?text=Image+Missing');
+        localImageUris = imagesResult.imageUrls || [];
+        while (localImageUris.length < imagePrompts.length) {
+            localImageUris.push('https://placehold.co/1080x1920.png?text=Image+Missing');
         }
         toast({ title: 'Image Generation Incomplete', description: 'Some images may be placeholders.', variant: 'destructive' });
       } else {
-        currentImageUrls = imagesResult.imageUrls;
-        toast({ title: `${currentImageUrls.length} Images generated!` });
+        localImageUris = imagesResult.imageUrls;
+        toast({ title: `${localImageUris.length} Images generated!` });
       }
-      setGeneratedImages(currentImageUrls);
+      setGeneratedImages(localImageUris);
       
-      const sceneTexts = currentScript.scenes.map(scene => scene.contentText);
+      // Use local data URIs for immediate preview
       const currentRemotionProps: CompositionProps = {
         title: currentScript.title,
-        sceneTexts: sceneTexts,
-        imageUris: currentImageUrls,
-        audioUri: currentAudioUri,
+        sceneTexts: currentScript.scenes.map(scene => scene.contentText),
+        imageUris: localImageUris,
+        audioUri: localAudioUri,
         musicUri: data.musicUri === 'NO_MUSIC_SELECTED' ? undefined : (data.musicUri || staticFile('placeholder-music.mp3')),
-        captions: currentCaptions,
+        captions: localCaptions,
         primaryColor: data.primaryColor || defaultPrimaryColor,
         secondaryColor: data.secondaryColor || defaultSecondaryColor,
         fontFamily: data.fontFamily || defaultFontFamily,
@@ -174,17 +174,32 @@ export default function GeneratePage() {
       };
       setRemotionProps(currentRemotionProps);
 
-      setLoadingStep('Saving video details...');
-      const videoToSave: Omit<VideoDocument, 'id' | 'createdAt'> = {
+      // Upload assets to Firebase Storage and save metadata to Firestore
+      setLoadingStep('Saving video to dashboard...');
+      toast({ title: 'Saving video...', description: 'Uploading assets...' });
+
+      const videoId = await createVideoPlaceholder(user.uid);
+      
+      let audioDownloadUrl = '';
+      if (localAudioUri) {
+          audioDownloadUrl = await uploadDataUriToStorage(localAudioUri, `videos/${user.uid}/${videoId}/audio.wav`);
+      }
+
+      const imageUploadPromises = localImageUris.map((uri, index) => 
+        uploadDataUriToStorage(uri, `videos/${user.uid}/${videoId}/image_${index}.png`)
+      );
+      const imageDownloadUrls = await Promise.all(imageUploadPromises);
+      
+      const videoToSave: Partial<VideoDocument> = {
         userId: user.uid,
         title: currentScript.title || data.topic,
         topic: data.topic,
         style: data.style,
         durationCategory: data.duration,
         scriptDetails: currentScript,
-        imageUris: currentImageUrls,
-        audioUri: currentAudioUri,
-        captions: currentCaptions,
+        imageUris: imageDownloadUrls, // Store download URLs
+        audioUri: audioDownloadUrl, // Store download URL
+        captions: localCaptions,
         musicUri: currentRemotionProps.musicUri,
         primaryColor: currentRemotionProps.primaryColor.toString(),
         secondaryColor: currentRemotionProps.secondaryColor.toString(),
@@ -192,15 +207,11 @@ export default function GeneratePage() {
         imageDurationInFrames: finalSceneDurationInFrames,
         totalDurationInFrames: totalVideoDurationInFramesCalculated,
         status: 'completed',
-        thumbnailUrl: currentImageUrls[0] || 'https://placehold.co/300x200.png',
+        thumbnailUrl: imageDownloadUrls[0] || 'https://placehold.co/300x200.png',
       };
-      try {
-        await saveVideoMetadata(videoToSave);
-        toast({ title: 'Video Saved!', description: 'Your video details have been saved to your dashboard.' });
-      } catch (saveError: any) {
-        console.error("Error saving video metadata:", saveError);
-        toast({ title: 'Save Failed', description: `Could not save video details: ${saveError.message}`, variant: 'destructive' });
-      }
+      
+      await updateVideoDocument(videoId, videoToSave);
+      toast({ title: 'Video Saved!', description: 'Your video is now available on your dashboard.' });
 
     } catch (error: any) {
       console.error('Video generation process failed:', error);
