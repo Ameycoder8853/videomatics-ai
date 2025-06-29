@@ -5,9 +5,9 @@ import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBd3NejbNidk6b6eqwMfcLLpvnQRqgyzJU",
-  authDomain: "videomatics-ai-4b304.firebaseapp.com",
-  projectId: "videomatics-ai-4b304",
-  storageBucket: "videomatics-ai-4b304.firebasestorage.app",
+  authDomain: "videomatic-ai-5c2b2.firebaseapp.com",
+  projectId: "videomatic-ai-5c2b2",
+  storageBucket: "videomatic-ai-5c2b2.appspot.com",
   messagingSenderId: "544423783139",
   appId: "1:544423783139:web:fe8e173e58b4c7a3b873d6",
   measurementId: "G-NE0VT2T105"
