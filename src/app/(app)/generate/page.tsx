@@ -160,7 +160,6 @@ export default function GeneratePage() {
       }
       setGeneratedImages(localImageUris);
       
-      // Use local data URIs for immediate preview
       const currentRemotionProps: CompositionProps = {
         title: currentScript.title,
         sceneTexts: currentScript.scenes.map(scene => scene.contentText),
@@ -175,24 +174,37 @@ export default function GeneratePage() {
       };
       setRemotionProps(currentRemotionProps);
 
-      // Upload assets to Firebase Storage and save metadata to Firestore
-      setLoadingStep('Saving video to dashboard...');
-      toast({ title: 'Saving video...', description: 'Uploading assets...' });
-
+      // === Asset Upload and Final Firestore Save ===
+      setLoadingStep('Saving video...');
+      toast({ title: 'Saving video...', description: 'Creating video record...' });
       videoId = await createVideoPlaceholder(user.uid);
       
       let audioDownloadUrl = '';
       if (localAudioUri) {
+          setLoadingStep('Uploading voiceover...');
+          toast({ title: 'Uploading voiceover...' });
           audioDownloadUrl = await uploadDataUriToStorage(localAudioUri, `videos/${user.uid}/${videoId}/audio.wav`);
       }
+      
+      const imageDownloadUrls: string[] = [];
+      const generatedImageUris = localImageUris.filter(uri => uri.startsWith('data:image'));
+      let uploadedCount = 0;
 
-      const imageUploadPromises = localImageUris.map((uri, index) => {
+      for (let i = 0; i < localImageUris.length; i++) {
+        const uri = localImageUris[i];
         if (uri.startsWith('data:image')) {
-          return uploadDataUriToStorage(uri, `videos/${user.uid}/${videoId}/image_${index}.png`);
+          uploadedCount++;
+          setLoadingStep(`Uploading image ${uploadedCount} of ${generatedImageUris.length}...`);
+          toast({ title: `Uploading image ${uploadedCount} of ${generatedImageUris.length}...` });
+          const downloadUrl = await uploadDataUriToStorage(uri, `videos/${user.uid}/${videoId}/image_${i}.png`);
+          imageDownloadUrls.push(downloadUrl);
+        } else {
+          imageDownloadUrls.push(uri); // Keep placeholder URL as-is
         }
-        return Promise.resolve(uri);
-      });
-      const imageDownloadUrls = await Promise.all(imageUploadPromises);
+      }
+      
+      setLoadingStep('Finalizing video details...');
+      toast({ title: 'Finalizing video details...' });
       
       const videoToSave: Partial<VideoDocument> = {
         userId: user.uid,
@@ -211,7 +223,7 @@ export default function GeneratePage() {
         imageDurationInFrames: finalSceneDurationInFrames,
         totalDurationInFrames: totalVideoDurationInFramesCalculated,
         status: 'completed',
-        thumbnailUrl: imageDownloadUrls[0] || 'https://placehold.co/300x200.png',
+        thumbnailUrl: imageDownloadUrls.find(url => url.startsWith('https')) || 'https://placehold.co/300x200.png',
       };
       
       await updateVideoDocument(videoId, videoToSave);
