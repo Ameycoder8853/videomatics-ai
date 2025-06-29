@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Gem, PlayCircle, BrainCircuit, Image as ImageIcon, Mic2, Palette, Zap, Film } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Navbar } from '@/components/Navbar';
 
 export default function HomePage() {
   const { loading } = useAuth();
-  // Removed router and user dependency, and the useEffect that redirected authenticated users.
   // Logged-in users can now see the landing page.
 
   if (loading) {
@@ -23,8 +23,9 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-purple-50 dark:via-purple-900/20 to-background p-4 sm:p-6 text-center">
-      <main className="container mx-auto px-2 sm:px-4 py-8 md:py-16">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-purple-50 dark:via-purple-900/20 to-background">
+      <Navbar />
+      <main className="flex-grow container mx-auto px-4 sm:px-6 py-8 md:py-16 text-center">
         <header className="mb-12 md:mb-20">
           <div className="flex justify-center items-center space-x-2 sm:space-x-3 mb-6">
             <Gem className="h-10 w-10 sm:h-12 md:h-16 md:w-16 text-primary" />
@@ -101,7 +102,7 @@ export default function HomePage() {
         </div>
       </main>
       
-      <footer className="py-8 text-center text-muted-foreground text-sm w-full border-t mt-12 md:mt-20">
+      <footer className="py-8 text-center text-muted-foreground text-sm w-full border-t mt-auto">
         © {new Date().getFullYear()} VividVerse. Create with AI.
       </footer>
     </div>
