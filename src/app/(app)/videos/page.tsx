@@ -1,47 +1,78 @@
 'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ListVideo, PlusCircle } from "lucide-react";
-import { DashboardList } from "@/components/DashboardList"; // Re-use dashboard list
+import { ListVideo, PlusCircle, Loader2 } from "lucide-react";
+import { DashboardList } from "@/components/DashboardList";
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserVideos, VideoDocument } from '@/firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 
 export default function VideosPage() {
-  // Mock data - replace with actual data fetching
-  const mockVideos = [
-    { id: '1', title: 'My First AI Video', thumbnailUrl: 'https://placehold.co/300x200.png', status: 'completed', createdAt: new Date(), dataAiHint: "abstract animation" },
-    { id: '2', title: 'Tech Product Demo', thumbnailUrl: 'https://placehold.co/300x200.png', status: 'completed', createdAt: new Date(), dataAiHint: "technology interface" },
-    { id: '3', title: 'Travel Vlog Intro', thumbnailUrl: 'https://placehold.co/300x200.png', status: 'completed', createdAt: new Date(), dataAiHint: "travel landscape" },
-    { id: '4', title: 'Marketing Ad', thumbnailUrl: 'https://placehold.co/300x200.png', status: 'completed', createdAt: new Date(), dataAiHint: "business presentation" },
-  ];
+  const { user } = useAuth(); // The (app) layout ensures the user is available
+  const [videos, setVideos] = useState<VideoDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // The AppLayout handles the case where the user is not logged in.
+    if (user) {
+      setIsLoading(true);
+      getUserVideos(user.uid)
+        .then(fetchedVideos => {
+          setVideos(fetchedVideos.map(v => ({
+            ...v,
+            createdAt: v.createdAt instanceof Timestamp ? v.createdAt.toDate() : new Date(v.createdAt as any),
+          })) as VideoDocument[]);
+        })
+        .catch(error => {
+          console.error("Failed to fetch user videos:", error);
+          // You could add a toast notification here for the user
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [user]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading your videos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold">My Videos</h1>
-          <p className="text-muted-foreground">Browse and manage all your generated videos.</p>
+          <h1 className="text-2xl sm:text-3xl font-headline font-bold">My Videos</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Browse and manage all your generated videos.</p>
         </div>
          <Link href="/generate" passHref>
-          <Button>
-            <PlusCircle className="mr-2 h-5 w-5" />
+          <Button className="w-full sm:w-auto">
+            <PlusCircle className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
             Create New Video
           </Button>
         </Link>
       </div>
 
-       {mockVideos.length > 0 ? (
-        <DashboardList videos={mockVideos} />
+       {videos.length > 0 ? (
+        <DashboardList videos={videos} />
       ) : (
-        <Card className="text-center py-12">
+        <Card className="text-center py-10 sm:py-12">
           <CardHeader>
-            <ListVideo className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-            <CardTitle className="text-2xl font-headline">No Videos Found</CardTitle>
-            <CardDescription>You haven't created any videos yet. Get started now!</CardDescription>
+            <ListVideo className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4" />
+            <CardTitle className="text-xl sm:text-2xl font-headline">No Videos Found</CardTitle>
+            <CardDescription className="text-sm sm:text-base">You haven't created any videos yet. Get started now!</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/generate" passHref>
-              <Button size="lg">
-                <PlusCircle className="mr-2 h-5 w-5" />
+              <Button size="lg" className="w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
                 Create Your First Video
               </Button>
             </Link>
