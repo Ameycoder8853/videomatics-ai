@@ -234,16 +234,25 @@ export default function GeneratePage() {
 
     } catch (error: any) {
       console.error('Video generation process failed:', error);
+      let errorMessage = error.message || 'An unknown error occurred.';
+      
+      // Check for specific Firebase Storage error codes
+      if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found' || error.code === 'storage/unknown') {
+        errorMessage = `Firebase Storage Error: ${error.message}. Please check your Storage Security Rules in the Firebase Console. They must allow writes for authenticated users to the 'videos/{userId}' path.`;
+      }
+
       toast({
         title: 'Generation Failed',
-        description: error.message || 'An error occurred.',
+        description: errorMessage,
         variant: 'destructive',
+        duration: 15000, // Give more time to read a complex error
       });
+
        if (videoId && user) {
         try {
           await updateVideoDocument(videoId, {
             status: 'failed',
-            errorMessage: error.message || 'An unknown error occurred during asset generation or upload.',
+            errorMessage: errorMessage,
           });
           toast({
             title: 'Update',
