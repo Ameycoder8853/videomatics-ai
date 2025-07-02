@@ -1,36 +1,61 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
+import {
+  Wand2,
+  ImageIcon,
+  Mic,
+  Palette,
+  Zap,
+  Film,
+  PlayCircle,
+} from "lucide-react";
 
-const useCases = [
+const features = [
   {
-    title: "Reels & Shorts",
-    desc: "Perfect for social creators looking to boost engagement with AI-generated short videos."
+    icon: Wand2,
+    title: "AI Scripting",
+    desc: "Craft compelling narratives based on your topic, style, and desired length.",
   },
   {
-    title: "Marketing Videos",
-    desc: "Promote your product or service using automated video workflows and voiceovers."
+    icon: ImageIcon,
+    title: "Visual Generation",
+    desc: "Bring your script to life with AI-generated images that match your story.",
   },
   {
-    title: "Educational Content",
-    desc: "Create quick explainer videos with subtitles, captions, and visuals in just minutes."
+    icon: Mic,
+    title: "AI Voiceovers",
+    desc: "Add professional voiceovers using advanced text-to-speech technology.",
   },
   {
-    title: "Product Demos",
-    desc: "Turn text instructions into demo walkthroughs instantly."
+    icon: Palette,
+    title: "Easy Customization",
+    desc: "Tailor colors, fonts, and pacing to match your brand or vision.",
+  },
+];
+
+const howItWorks = [
+  {
+    icon: Zap,
+    step: "STEP 1",
+    title: "Describe Your Video",
+    desc: "Provide a topic, choose a style, and set your desired video length and pace.",
   },
   {
-    title: "Real Estate Showcases",
-    desc: "Generate beautiful walkthroughs from photos or property scripts."
+    icon: Film,
+    step: "STEP 2",
+    title: "AI Generates Assets",
+    desc: "Our AI crafts a script, generates visuals, and creates a voiceover for your story.",
   },
   {
-    title: "Client Proposals",
-    desc: "Send video-based pitches that convert better than PDFs or decks."
-  }
+    icon: PlayCircle,
+    step: "STEP 3",
+    title: "Preview & Download",
+    desc: "Review your AI-generated video, make tweaks if needed, and download your masterpiece.",
+  },
 ];
 
 const integrations = [
@@ -96,12 +121,33 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section className="bg-card/50 rounded-xl p-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-10">Popular Use Cases</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {useCases.map((item, index) => (
-                <div key={index} className="bg-card p-6 rounded-lg shadow-md transition-all hover:shadow-xl hover:scale-105">
-                  <h3 className="text-xl font-semibold text-primary mb-2">{item.title}</h3>
+          <section id="features" className="space-y-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-center">Features That Shine</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {features.map((item, index) => (
+                <div key={index} className="bg-card/50 p-6 rounded-lg shadow-md transition-all hover:shadow-xl hover:scale-105 border border-transparent hover:border-primary/50 text-center">
+                  <div className="flex justify-center mb-4">
+                     <div className="p-3 bg-primary/10 rounded-lg">
+                        <item.icon className="h-8 w-8 text-primary" />
+                     </div>
+                  </div>
+                  <h3 className="text-xl font-semibold text-card-foreground mb-2">{item.title}</h3>
+                  <p className="text-muted-foreground">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section id="how-it-works" className="space-y-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-center">How It Works</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+              {howItWorks.map((item, index) => (
+                <div key={index} className="flex flex-col items-center text-center">
+                  <div className="mb-4 flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary">
+                    <item.icon className="h-8 w-8" />
+                  </div>
+                  <p className="text-sm font-bold text-primary">{item.step}</p>
+                  <h3 className="text-xl font-semibold text-card-foreground mt-2 mb-2">{item.title}</h3>
                   <p className="text-muted-foreground">{item.desc}</p>
                 </div>
               ))}
