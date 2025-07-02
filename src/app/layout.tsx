@@ -20,8 +20,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'VividVerse - AI Video Generation',
-  description: 'Create stunning videos with AI using VividVerse.',
+  title: 'Videomatics AI - AI Video Generation',
+  description: 'Create stunning videos with AI using Videomatics AI.',
 };
 
 export default function RootLayout({

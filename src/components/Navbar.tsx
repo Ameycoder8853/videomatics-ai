@@ -37,7 +37,7 @@ export function Navbar() {
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 sm:px-6">
         <Link href="/" className="mr-4 flex items-center space-x-2">
           <Gem className="h-6 w-6 text-primary" />
-          <span className="font-bold font-headline text-lg sm:text-xl hidden sm:inline-block">VividVerse</span>
+          <span className="font-bold font-headline text-lg sm:text-xl hidden sm:inline-block">Videomatics AI</span>
         </Link>
         <nav className="flex flex-1 items-center space-x-1 sm:space-x-2 md:space-x-4">
           <Link href="/" legacyBehavior passHref>

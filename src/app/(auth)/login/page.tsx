@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -41,7 +42,7 @@ export default function LoginPage() {
       await signInWithEmailPassword(data.email, data.password);
       toast({
         title: 'Login Successful',
-        description: 'Welcome back to VividVerse!',
+        description: 'Welcome back to Videomatics AI!',
       });
       router.push('/dashboard');
     } catch (error: any) {
@@ -60,7 +61,7 @@ export default function LoginPage() {
     <Card className="w-full max-w-md shadow-2xl">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-headline">Welcome Back!</CardTitle>
-        <CardDescription>Log in to your VividVerse account to continue creating.</CardDescription>
+        <CardDescription>Log in to your Videomatics AI account to continue creating.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

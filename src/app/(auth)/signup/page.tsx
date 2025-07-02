@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -46,7 +47,7 @@ export default function SignupPage() {
       await signUpWithEmailPassword(data.email, data.password);
       toast({
         title: 'Account Created!',
-        description: "Welcome to VividVerse! You're now logged in.",
+        description: "Welcome to Videomatics AI! You're now logged in.",
       });
       router.push('/dashboard'); // Redirect to dashboard after successful signup
     } catch (error: any) {
@@ -65,7 +66,7 @@ export default function SignupPage() {
     <Card className="w-full max-w-md shadow-2xl">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-headline">Create Your Account</CardTitle>
-        <CardDescription>Join VividVerse and start creating amazing AI videos today!</CardDescription>
+        <CardDescription>Join Videomatics AI and start creating amazing AI videos today!</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

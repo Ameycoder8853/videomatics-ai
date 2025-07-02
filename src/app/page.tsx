@@ -1,129 +1,156 @@
 
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Gem, PlayCircle, BrainCircuit, Image as ImageIcon, Mic2, Palette, Zap, Film } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Navbar } from '@/components/Navbar';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Navbar } from "@/components/Navbar";
 
-export default function HomePage() {
-  const { loading } = useAuth();
-  // Logged-in users can now see the landing page.
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
-      </div>
-    );
+const useCases = [
+  {
+    title: "Reels & Shorts",
+    desc: "Perfect for social creators looking to boost engagement with AI-generated short videos."
+  },
+  {
+    title: "Marketing Videos",
+    desc: "Promote your product or service using automated video workflows and voiceovers."
+  },
+  {
+    title: "Educational Content",
+    desc: "Create quick explainer videos with subtitles, captions, and visuals in just minutes."
+  },
+  {
+    title: "Product Demos",
+    desc: "Turn text instructions into demo walkthroughs instantly."
+  },
+  {
+    title: "Real Estate Showcases",
+    desc: "Generate beautiful walkthroughs from photos or property scripts."
+  },
+  {
+    title: "Client Proposals",
+    desc: "Send video-based pitches that convert better than PDFs or decks."
   }
+];
+
+const integrations = [
+  "YouTube", "Instagram", "TikTok", "Firebase", "Razorpay", 
+  "Remotion", "AssemblyAI", "ElevenLabs", "Gemini AI"
+];
+
+const faqs = [
+  {
+    q: "Is Videomatics AI free to use?",
+    a: "Yes! You can create and preview videos for free. Rendering/download credits may apply."
+  },
+  {
+    q: "Do I need video editing skills?",
+    a: "No. Our AI handles everything from voiceovers to visuals. You just give the idea."
+  },
+  {
+    q: "Can I download videos?",
+    a: "Yes, rendered videos can be downloaded or shared directly."
+  }
+];
+
+const footerLinks = {
+  Product: ["AI Video Generator", "Templates", "Pricing"],
+  Company: ["About", "Blog", "Contact"],
+  Support: ["Help Center", "FAQs", "Discord"],
+  Legal: ["Privacy Policy", "Terms", "Refunds"],
+};
+
+export default function LandingPage() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-purple-50 dark:via-purple-900/20 to-background">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="flex-grow container mx-auto px-4 sm:px-6 py-8 md:py-16 text-center">
-        <header className="mb-12 md:mb-20">
-          <div className="flex justify-center items-center space-x-2 sm:space-x-3 mb-6">
-            <Gem className="h-10 w-10 sm:h-12 md:h-16 md:w-16 text-primary" />
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-headline font-bold text-primary">VividVerse</h1>
-          </div>
-          <p className="text-lg sm:text-xl md:text-2xl text-foreground/80 max-w-3xl mx-auto">
-            Unleash your creativity. Generate stunning videos with the power of AI – from script to final cut, all in your browser.
-          </p>
-        </header>
 
-        <section id="features" className="mb-16 md:mb-24">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-semibold mb-8 sm:mb-10 text-center">Features That Shine</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            <FeatureCard
-              icon={<BrainCircuit className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
-              title="AI Scripting"
-              description="Craft compelling narratives based on your topic, style, and desired length."
-            />
-            <FeatureCard
-              icon={<ImageIcon className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
-              title="Visual Generation"
-              description="Bring your script to life with AI-generated images that match your story."
-            />
-            <FeatureCard
-              icon={<Mic2 className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
-              title="AI Voiceovers"
-              description="Add professional voiceovers using advanced text-to-speech technology."
-            />
-            <FeatureCard
-              icon={<Palette className="h-8 w-8 sm:h-10 sm:w-10 text-accent" />}
-              title="Easy Customization"
-              description="Tailor colors, fonts, and pacing to match your brand or vision."
-            />
-          </div>
-        </section>
+      <main
+        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        } transition-all duration-1000`}
+      >
+        <div className="space-y-20">
+          <section className="text-center space-y-6">
+            <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
+              Create Stunning Videos with{" "}
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+                AI Magic
+              </span>
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Transform your ideas into professional videos in minutes using cutting-edge AI technology.
+              <br /> <br />
+              Your Own Video Generator AI
+            </p>
+            <div className="space-x-4">
+              <Button asChild size="lg" className="hover:scale-105 transition-transform duration-200 text-lg px-8 py-4">
+                <Link href="/dashboard">Start Creating Now</Link>
+              </Button>
+            </div>
+          </section>
 
-        <section id="how-it-works" className="mb-16 md:mb-24">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-semibold mb-8 sm:mb-10 text-center">How It Works</h2>
-          <div className="grid md:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
-            <StepCard
-              step="1"
-              title="Describe Your Video"
-              description="Provide a topic, choose a style, and set your desired video length and pace."
-              icon={<Zap className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />}
-            />
-            <StepCard
-              step="2"
-              title="AI Generates Assets"
-              description="Our AI crafts a script, generates visuals, and creates a voiceover for your story."
-              icon={<Film className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />}
-            />
-            <StepCard
-              step="3"
-              title="Preview & Download"
-              description="Review your AI-generated video, make tweaks if needed, and download your masterpiece."
-              icon={<PlayCircle className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />}
-            />
-          </div>
-        </section>
+          <section className="bg-card/50 rounded-xl p-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-10">Popular Use Cases</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {useCases.map((item, index) => (
+                <div key={index} className="bg-card p-6 rounded-lg shadow-md transition-all hover:shadow-xl hover:scale-105">
+                  <h3 className="text-xl font-semibold text-primary mb-2">{item.title}</h3>
+                  <p className="text-muted-foreground">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
-        <div className="space-y-6 text-center">
-          <Link href="/signup" passHref>
-            <Button size="lg" className="w-full sm:w-auto px-8 sm:px-10 py-5 sm:py-6 text-md sm:text-lg bg-primary hover:bg-primary/90 shadow-lg transform hover:scale-105 transition-transform">
-              Get Started Free
-              <PlayCircle className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/login" className="text-accent hover:underline font-medium">
-              Log In
-            </Link>
-          </p>
+          <section className="text-center space-y-10">
+            <h2 className="text-3xl md:text-4xl font-bold">Seamless Integrations</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Videomatics AI works great with your favorite platforms.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+              {integrations.map((item) => (
+                 <span key={item} className="px-6 py-2 border border-border rounded-full bg-card/80">{item}</span>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-muted/30 p-10 rounded-xl space-y-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-center">Frequently Asked Questions</h2>
+            <div className="space-y-4 max-w-3xl mx-auto">
+              {faqs.map((item, i) => (
+                <div key={i} className="bg-card p-5 rounded-lg border border-border">
+                  <h4 className="font-semibold text-primary mb-1">Q: {item.q}</h4>
+                  <p className="text-muted-foreground">A: {item.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </main>
-      
-      <footer className="py-8 text-center text-muted-foreground text-sm w-full border-t mt-auto">
-        © {new Date().getFullYear()} VividVerse. Create with AI.
+
+      <footer className="bg-muted/50 py-12 mt-20 border-t border-border">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-sm text-muted-foreground">
+            {Object.entries(footerLinks).map(([title, links]) => (
+                <div key={title}>
+                    <h4 className="font-semibold text-foreground mb-2">{title}</h4>
+                    <ul className="space-y-1">
+                        {links.map(link => <li key={link}><Link href="#" className="hover:text-primary">{link}</Link></li>)}
+                    </ul>
+                </div>
+            ))}
+          </div>
+          <div className="mt-10 pt-6 border-t border-border text-center text-muted-foreground">
+            <p>© {new Date().getFullYear()} Videomatics AI. All rights reserved.</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
 }
-
-const FeatureCard: React.FC<{ icon: React.ReactNode, title: string, description: string }> = ({ icon, title, description }) => (
-  <Card className="bg-card/80 dark:bg-card/50 p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 text-center transform hover:-translate-y-1">
-    <div className="flex justify-center mb-3 sm:mb-4">{icon}</div>
-    <h3 className="text-lg sm:text-xl font-headline font-semibold mb-1 sm:mb-2 text-card-foreground">{title}</h3>
-    <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
-  </Card>
-);
-
-const StepCard: React.FC<{ step: string, title: string, description: string, icon: React.ReactNode }> = ({ step, title, description, icon }) => (
-  <div className="flex flex-col items-center p-4 sm:p-6 bg-card/50 dark:bg-card/30 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-    <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 mb-3 sm:mb-4 rounded-full bg-primary/10 text-primary">
-      {icon}
-    </div>
-    <div className="text-xs sm:text-sm font-bold text-primary mb-1">STEP {step}</div>
-    <h3 className="text-md sm:text-lg font-semibold mb-1 sm:mb-2 text-card-foreground">{title}</h3>
-    <p className="text-xs text-center text-muted-foreground">{description}</p>
-  </div>
-);
