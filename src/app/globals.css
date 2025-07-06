@@ -14,13 +14,13 @@ body {
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
+    --accent: 346.8 77.2% 49.8%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -46,25 +46,25 @@ body {
   }
 
   .dark {
-    --background: 230 20% 11%;
-    --foreground: 0 0% 98%;
-    --card: 230 20% 15%;
-    --card-foreground: 0 0% 98%;
-    --popover: 230 20% 11%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 220 85% 60%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 230 20% 20%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 230 20% 18%;
-    --muted-foreground: 230 15% 65%;
-    --accent: 230 20% 22%;
-    --accent-foreground: 0 0% 98%;
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 263.4 95.2% 58.2%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.5 33.6% 65.1%;
+    --accent: 346.8 77.2% 49.8%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 230 20% 25%;
-    --input: 230 20% 25%;
-    --ring: 220 85% 60%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 263.4 95.2% 58.2%;
     --radius: 0.75rem;
 
     --chart-1: 220 70% 50%;
@@ -93,6 +93,8 @@ body {
   }
   .dark body {
     background-image: radial-gradient(ellipse 80% 50% at 50% -20%, hsla(var(--primary), 0.1), transparent);
+    background-size: 200% 200%;
+    animation: subtle-gradient-pan 15s ease infinite;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;

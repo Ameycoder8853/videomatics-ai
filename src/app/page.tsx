@@ -135,7 +135,7 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="text-center space-y-8 pt-16 md:pt-24">
             <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tight font-headline">
-              <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary via-fuchsia-500 to-accent bg-clip-text text-transparent">
                 Create Stunning Videos
               </span>
               <br />
@@ -145,7 +145,7 @@ export default function LandingPage() {
               Transform your ideas into professional videos in minutes. No editing skills required. Just describe what you want, and our AI handles the rest.
             </p>
             <div className="flex justify-center items-center flex-wrap gap-4 pt-4">
-              <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg px-6 py-3 transition-transform hover:scale-105 shadow-lg shadow-primary/20">
+              <Button asChild size="lg" className="bg-gradient-to-r from-primary to-fuchsia-600 hover:from-primary/90 hover:to-fuchsia-600/90 text-white font-semibold rounded-lg px-6 py-3 transition-transform hover:scale-105 shadow-lg shadow-primary/20">
                 <Link href="/dashboard">
                   Start Creating Videos
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -249,7 +249,7 @@ export default function LandingPage() {
               {testimonials.map((t, i) => (
                 <div
                   key={i}
-                  className="bg-card p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300 border"
+                  className="bg-card p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border"
                 >
                   <p className="text-muted-foreground italic mb-4">"{t.quote}"</p>
                   <div className="font-semibold text-foreground">{t.author}</div>
@@ -260,14 +260,14 @@ export default function LandingPage() {
           </section>
 
           {/* CTA Section */}
-          <section className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground rounded-xl p-10 md:p-16 text-center">
+          <section className="bg-gradient-to-r from-primary to-fuchsia-600 text-primary-foreground rounded-xl p-10 md:p-16 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 font-headline">Ready to Create AI-Powered Videos?</h2>
             <p className="text-lg mb-8 opacity-90">Join Videomatics AI and transform your content game.</p>
             <Button
               asChild
               size="lg"
               variant="secondary"
-              className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-medium rounded-full text-lg px-8 py-4 transition hover:scale-105"
+              className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-medium rounded-full text-lg px-8 py-4 transition-transform hover:scale-105"
             >
               <Link href="/dashboard">Get Started for Free</Link>
             </Button>
@@ -280,7 +280,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
               {integrations.map((item) => (
-                 <span key={item} className="px-6 py-2 border border-border rounded-full bg-card/80">{item}</span>
+                 <span key={item} className="px-6 py-2 border border-border rounded-full bg-card/80 transition-all duration-200 hover:bg-primary/10 hover:border-primary/50 hover:scale-105 hover:text-foreground">{item}</span>
               ))}
             </div>
           </section>
@@ -289,7 +289,7 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-center font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4 max-w-3xl mx-auto">
               {faqs.map((item, i) => (
-                <div key={i} className="bg-card p-5 rounded-lg border border-border">
+                <div key={i} className="bg-card p-5 rounded-lg border border-border transition-all duration-200 hover:border-primary/50 hover:bg-card/80 hover:scale-[1.01]">
                   <h4 className="font-semibold text-primary mb-1">Q: {item.q}</h4>
                   <p className="text-muted-foreground">A: {item.a}</p>
                 </div>
@@ -306,7 +306,7 @@ export default function LandingPage() {
                 <div key={title}>
                     <h4 className="font-semibold text-foreground mb-2">{title}</h4>
                     <ul className="space-y-1">
-                        {links.map(link => <li key={link}><Link href="#" className="hover:text-primary">{link}</Link></li>)}
+                        {links.map(link => <li key={link}><Link href="#" className="hover:text-primary transition-colors">{link}</Link></li>)}
                     </ul>
                 </div>
             ))}
@@ -319,5 +319,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
