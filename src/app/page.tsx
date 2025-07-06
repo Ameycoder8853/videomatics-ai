@@ -11,6 +11,12 @@ import {
   MonitorPlay,
   LayoutGrid,
   Download,
+  Clapperboard,
+  Bot,
+  Type,
+  Video,
+  BarChart,
+  Target
 } from "lucide-react";
 
 
@@ -130,61 +136,35 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
       <main
-        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 ${
+        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-16 ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         } transition-all duration-1000`}
       >
         <div className="space-y-20">
           {/* Hero Section */}
-          <section className="text-center space-y-6">
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
-              Create Stunning Videos with{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-                AI Magic
-              </span>
+          <section className="text-center space-y-6 pt-8">
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+              Create Viral Videos with AI
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Transform your ideas into professional videos in minutes using cutting-edge AI technology.
-              <br /> <br />
-              Your Own Video Generator AI
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+              Generate short-form videos with AI voice, captions, stock footage, and more. Create faceless videos for TikTok, Reels, and Shorts in minutes.
             </p>
-            <div className="space-x-4">
-              <Button asChild size="lg" className="hover:scale-105 transition-transform duration-200 text-lg px-8 py-4">
-                <Link href="/dashboard">Start Creating Now</Link>
+            <div className="space-y-4">
+              <Button asChild size="lg" className="hover:scale-105 transition-transform duration-200 text-lg px-8 py-6 rounded-full font-semibold">
+                <Link href="/dashboard">Get Started for Free</Link>
               </Button>
-               <Button
-                onClick={() => handleScrollTo("video-tutorial")}
-                variant="outline"
-                size="lg"
-                className="hover:scale-105 transition-transform duration-200 text-lg px-8 py-4"
-              >
-                Watch Tutorial
-              </Button>
+               <p className="text-sm text-muted-foreground">Trusted by 10,000+ creators, marketers, and entrepreneurs</p>
             </div>
-          </section>
-          
-          {/* Stats Section */}
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center hover:scale-105 transition-transform duration-200">
-                <div className="text-4xl font-bold text-primary">{stat.number}</div>
-                <div className="text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </section>
-
-          {/* Video Tutorial Section */}
-          <section id="video-tutorial" className="text-center space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground">How Videomatics AI Works</h2>
-            <p className="text-muted-foreground mb-4">
-              Watch this short video to see how easily you can create AI videos.
-            </p>
-            <div className="flex justify-center">
-              <div className="relative w-full md:w-[80%] lg:w-[70%] rounded-xl overflow-hidden shadow-xl border border-border">
+             <div className="flex justify-center pt-8">
+              <div className="relative w-full md:w-[80%] lg:w-[70%] rounded-xl overflow-hidden shadow-2xl shadow-primary/20 border-2 border-primary/20"
+                style={{
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 60%)'
+                }}
+              >
                 <video
                   controls
                   className="w-full h-auto rounded-xl"
@@ -198,9 +178,19 @@ export default function LandingPage() {
             </div>
           </section>
           
+          {/* Stats Section */}
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12">
+            {stats.map((stat, i) => (
+              <div key={i} className="text-center hover:scale-105 transition-transform duration-200">
+                <div className="text-4xl font-bold text-primary">{stat.number}</div>
+                <div className="text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
+          </section>
+          
           {/* Features Section */}
           <section id="features">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Features You’ll Love</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Features That Shine</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {features.map((item, index) => (
                 <div
@@ -255,7 +245,7 @@ export default function LandingPage() {
           </section>
 
           {/* CTA Section */}
-          <section className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl p-10 md:p-16 text-center">
+          <section className="bg-gradient-to-r from-primary to-blue-500 text-primary-foreground rounded-xl p-10 md:p-16 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Create AI-Powered Videos?</h2>
             <p className="text-lg mb-8 opacity-90">Join Videomatics AI and transform your content game.</p>
             <Button
@@ -294,7 +284,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <footer className="bg-muted/50 py-12 mt-20 border-t border-border">
+      <footer className="bg-card py-12 mt-20 border-t border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-sm text-muted-foreground">
             {Object.entries(footerLinks).map(([title, links]) => (
