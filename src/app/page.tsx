@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,6 +16,9 @@ import {
   Play,
   Zap,
   Clock,
+  Palette,
+  Captions,
+  Film,
 } from "lucide-react";
 
 
@@ -185,17 +189,17 @@ export default function LandingPage() {
             </div>
           </section>
           
-           {/* How It Works Section */}
-          <section className="space-y-10">
+          {/* How It Works Section */}
+          <section className="space-y-12">
             <h2 className="text-3xl md:text-4xl font-bold text-center font-headline">How It Works</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
               {howItWorks.map((item) => (
-                <div key={item.step} className="relative p-6 border rounded-xl overflow-hidden bg-card/50 hover:shadow-lg hover:border-primary/30 transition-all duration-300 transform hover:-translate-y-1">
-                  <div className="text-6xl font-bold text-muted/20 absolute -top-2 -left-2 select-none">
+                <div key={item.step} className="relative p-8 border border-foreground/10 rounded-xl overflow-hidden bg-card/50 transition-all duration-300 hover:border-primary/30 hover:shadow-primary/20 hover:shadow-lg hover:-translate-y-1">
+                  <div className="text-8xl font-black text-foreground/5 absolute -top-4 -left-2 select-none">
                     {item.step}
                   </div>
-                  <div className="relative z-10 pt-8">
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">{item.title}</h3>
+                  <div className="relative z-10 pt-10">
+                    <h3 className="text-2xl font-semibold mb-3 text-foreground">{item.title}</h3>
                     <p className="text-muted-foreground">{item.description}</p>
                   </div>
                 </div>
@@ -315,3 +319,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
