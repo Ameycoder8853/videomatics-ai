@@ -11,12 +11,8 @@ import {
   MonitorPlay,
   LayoutGrid,
   Download,
-  Clapperboard,
-  Bot,
-  Type,
-  Video,
-  BarChart,
-  Target
+  ArrowRight,
+  Play
 } from "lucide-react";
 
 
@@ -131,10 +127,6 @@ export default function LandingPage() {
     setIsVisible(true);
   }, []);
 
-  const handleScrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
@@ -146,23 +138,56 @@ export default function LandingPage() {
       >
         <div className="space-y-20">
           {/* Hero Section */}
-          <section className="text-center space-y-6 pt-8">
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight">
-              Create Viral Videos with AI
+          <section className="text-center space-y-8 pt-16 md:pt-24">
+            <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tight">
+              <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                Create Stunning Videos
+              </span>
+              <br />
+              with AI Magic
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Generate short-form videos with AI voice, captions, stock footage, and more. Create faceless videos for TikTok, Reels, and Shorts in minutes.
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              Transform your ideas into professional videos in minutes. No editing skills required. Just describe what you want, and our AI handles the rest.
             </p>
-            <div className="space-y-4">
-              <Button asChild size="lg" className="hover:scale-105 transition-transform duration-200 text-lg px-8 py-6 rounded-full font-semibold">
-                <Link href="/dashboard">Get Started for Free</Link>
+            <div className="flex justify-center items-center flex-wrap gap-4 pt-4">
+              <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg px-6 py-3 transition-transform hover:scale-105 shadow-lg shadow-primary/20">
+                <Link href="/dashboard">
+                  Start Creating Videos
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
-               <p className="text-sm text-muted-foreground">Trusted by 10,000+ creators, marketers, and entrepreneurs</p>
+              <Button asChild size="lg" variant="outline" className="bg-transparent border-muted-foreground/50 hover:bg-muted/50 hover:border-muted-foreground rounded-lg px-6 py-3 transition-transform hover:scale-105">
+                <a href="#video-tutorial" onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('video-tutorial')?.scrollIntoView({ behavior: 'smooth' });
+                }}>
+                  <Play className="mr-2 h-4 w-4" />
+                  Watch Demo
+                </a>
+              </Button>
             </div>
-             <div className="flex justify-center pt-8">
+          </section>
+          
+          {/* Stats Section */}
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12">
+            {stats.map((stat, i) => (
+              <div key={i} className="text-center hover:scale-105 transition-transform duration-200">
+                <div className="text-4xl font-bold text-primary">{stat.number}</div>
+                <div className="text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
+          </section>
+
+          {/* Video Tutorial Section */}
+          <section id="video-tutorial" className="text-center space-y-6">
+            <h2 className="text-3xl md:text-4xl font-bold">How Videomatics AI Works</h2>
+            <p className="text-muted-foreground mb-4">
+              Watch this short video to see how easily you can create AI videos.
+            </p>
+            <div className="flex justify-center">
               <div className="relative w-full md:w-[80%] lg:w-[70%] rounded-xl overflow-hidden shadow-2xl shadow-primary/20 border-2 border-primary/20"
                 style={{
-                    background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 60%)'
+                    background: 'radial-gradient(circle, hsla(var(--primary), 0.1) 0%, transparent 60%)'
                 }}
               >
                 <video
@@ -178,19 +203,9 @@ export default function LandingPage() {
             </div>
           </section>
           
-          {/* Stats Section */}
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center hover:scale-105 transition-transform duration-200">
-                <div className="text-4xl font-bold text-primary">{stat.number}</div>
-                <div className="text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </section>
-          
           {/* Features Section */}
           <section id="features">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Features That Shine</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Features You’ll Love</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {features.map((item, index) => (
                 <div
@@ -245,7 +260,7 @@ export default function LandingPage() {
           </section>
 
           {/* CTA Section */}
-          <section className="bg-gradient-to-r from-primary to-blue-500 text-primary-foreground rounded-xl p-10 md:p-16 text-center">
+          <section className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground rounded-xl p-10 md:p-16 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Create AI-Powered Videos?</h2>
             <p className="text-lg mb-8 opacity-90">Join Videomatics AI and transform your content game.</p>
             <Button
