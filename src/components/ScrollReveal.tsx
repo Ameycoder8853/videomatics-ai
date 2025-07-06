@@ -18,7 +18,7 @@ export const ScrollReveal = ({
   delay = 0,
   duration = 0.5,
   yOffset = 40,
-  once = true,
+  once = false,
 }: ScrollRevealProps) => {
   return (
     <motion.div
