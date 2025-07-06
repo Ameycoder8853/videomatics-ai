@@ -12,42 +12,33 @@ import {
   LayoutGrid,
   Download,
   ArrowRight,
-  Play
+  Play,
+  Zap,
+  Clock,
 } from "lucide-react";
 
 
-const features = [
+const whyChooseFeatures = [
   {
-    icon: Wand2,
-    title: "AI Script Generator",
-    desc: "Generate compelling video scripts instantly using Gemini AI.",
+    icon: Zap,
+    title: "AI-Powered Generation",
+    desc: "Advanced AI creates professional videos from your ideas in minutes.",
+    color: "text-blue-400",
   },
   {
-    icon: Mic,
-    title: "Voiceovers by AI",
-    desc: "Create realistic voices with Google's text-to-speech models.",
+    icon: Clock,
+    title: "Lightning Fast",
+    desc: "Generate complete videos in under 2 minutes with our optimized pipeline.",
+    color: "text-purple-400",
   },
   {
     icon: Sparkles,
-    title: "Auto Visuals",
-    desc: "Convert scripts into scenes using AI-generated images.",
-  },
-  {
-    icon: MonitorPlay,
-    title: "Browser-Based Preview",
-    desc: "Preview your videos in-browser before rendering and downloading.",
-  },
-  {
-    icon: LayoutGrid,
-    title: "Social Formats",
-    desc: "Perfect for Reels, YouTube Shorts, TikToks and more.",
-  },
-  {
-    icon: Download,
-    title: "Instant Download",
-    desc: "Render videos directly in your browser and download them instantly.",
+    title: "Multiple Styles",
+    desc: "Choose from casual to professional styles that match your brand.",
+    color: "text-pink-400",
   },
 ];
+
 
 const howItWorks = [
   {
@@ -139,7 +130,7 @@ export default function LandingPage() {
         <div className="space-y-20">
           {/* Hero Section */}
           <section className="text-center space-y-8 pt-16 md:pt-24">
-            <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tight font-headline">
               <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
                 Create Stunning Videos
               </span>
@@ -167,7 +158,51 @@ export default function LandingPage() {
               </Button>
             </div>
           </section>
+
+          {/* Why Choose Us Section */}
+          <section id="why-choose-us" className="text-center space-y-12">
+            <div className="space-y-4">
+              <h2 className="text-3xl md:text-4xl font-bold font-headline">Why Choose Videomatics AI?</h2>
+              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                Powerful AI technology meets intuitive design to deliver an exceptional video creation experience.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {whyChooseFeatures.map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-card/50 p-8 rounded-xl border border-border/20 shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 transform hover:-translate-y-2"
+                >
+                  <div className="flex justify-center mb-4">
+                    <div className={`p-3 bg-card rounded-full`}>
+                      <item.icon className={`h-8 w-8 ${item.color}`} />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">{item.title}</h3>
+                  <p className="text-muted-foreground">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
           
+           {/* How It Works Section */}
+          <section className="space-y-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-center font-headline">How It Works</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-2">
+              {howItWorks.map((item) => (
+                <div key={item.step} className="relative p-6 border rounded-xl overflow-hidden bg-card/50 hover:shadow-lg hover:border-primary/30 transition-all duration-300 transform hover:-translate-y-1">
+                  <div className="text-6xl font-bold text-muted/20 absolute -top-2 -left-2 select-none">
+                    {item.step}
+                  </div>
+                  <div className="relative z-10 pt-8">
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">{item.title}</h3>
+                    <p className="text-muted-foreground">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* Stats Section */}
           <section className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12">
             {stats.map((stat, i) => (
@@ -180,7 +215,7 @@ export default function LandingPage() {
 
           {/* Video Tutorial Section */}
           <section id="video-tutorial" className="text-center space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold">How Videomatics AI Works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold font-headline">See Videomatics AI in Action</h2>
             <p className="text-muted-foreground mb-4">
               Watch this short video to see how easily you can create AI videos.
             </p>
@@ -202,49 +237,10 @@ export default function LandingPage() {
               </div>
             </div>
           </section>
-          
-          {/* Features Section */}
-          <section id="features">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Features You’ll Love</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {features.map((item, index) => (
-                <div
-                  key={index}
-                  className="bg-card p-6 rounded-xl border shadow-sm hover:shadow-lg hover:border-primary/30 transition duration-300"
-                >
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <item.icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-card-foreground">{item.title}</h3>
-                  </div>
-                  <p className="text-muted-foreground">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-          
-           {/* How It Works Section */}
-          <section className="space-y-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-center">How It Works</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {howItWorks.map((item) => (
-                <div key={item.step} className="relative p-6 border rounded-xl overflow-hidden bg-card">
-                  <div className="text-6xl font-bold text-muted/20 absolute -top-2 -left-2 select-none">
-                    {item.step}
-                  </div>
-                  <div className="relative z-10 pt-8">
-                    <h3 className="text-xl font-semibold mb-2 text-card-foreground">{item.title}</h3>
-                    <p className="text-muted-foreground">{item.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
 
           {/* Testimonials */}
           <section className="bg-muted/50 rounded-3xl p-8 md:p-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">What Creators Say</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 font-headline">What Creators Say</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {testimonials.map((t, i) => (
                 <div
@@ -261,7 +257,7 @@ export default function LandingPage() {
 
           {/* CTA Section */}
           <section className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground rounded-xl p-10 md:p-16 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Create AI-Powered Videos?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 font-headline">Ready to Create AI-Powered Videos?</h2>
             <p className="text-lg mb-8 opacity-90">Join Videomatics AI and transform your content game.</p>
             <Button
               asChild
@@ -274,7 +270,7 @@ export default function LandingPage() {
           </section>
 
           <section className="text-center space-y-10">
-            <h2 className="text-3xl md:text-4xl font-bold">Seamless Integrations</h2>
+            <h2 className="text-3xl md:text-4xl font-bold font-headline">Seamless Integrations</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Videomatics AI works great with your favorite platforms.
             </p>
@@ -286,7 +282,7 @@ export default function LandingPage() {
           </section>
 
           <section className="bg-muted/30 p-10 rounded-xl space-y-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-center">Frequently Asked Questions</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4 max-w-3xl mx-auto">
               {faqs.map((item, i) => (
                 <div key={i} className="bg-card p-5 rounded-lg border border-border">
