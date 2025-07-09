@@ -70,11 +70,16 @@ export const updateVideoDocument = async (videoId: string, videoData: Partial<Om
 // Get all videos for a specific user, ordered by creation date (newest first)
 export const getUserVideos = async (userId: string): Promise<VideoDocument[]> => {
   try {
-    const q = query(videosCollection, where('userId', '==', userId));
+    const q = query(videosCollection, where('userId', '==', userId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VideoDocument));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching user videos: ", error);
+    if (error.code === 'failed-precondition' && error.message.includes('requires an index')) {
+      console.error("Firestore index required. Please create it using the link provided in the Firebase error message in your browser's console.");
+      // This more specific error helps the user diagnose the problem.
+      throw new Error("A database index is required for this query. Please check the browser console for a link to create it in your Firebase project.");
+    }
     throw error;
   }
 };

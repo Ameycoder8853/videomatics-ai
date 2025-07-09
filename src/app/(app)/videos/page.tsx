@@ -10,11 +10,13 @@ import { DashboardList } from "@/components/DashboardList";
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserVideos, VideoDocument } from '@/firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function VideosPage() {
   const { user } = useAuth(); // The (app) layout ensures the user is available
   const [videos, setVideos] = useState<VideoDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     // The AppLayout handles the case where the user is not logged in.
@@ -22,26 +24,26 @@ export default function VideosPage() {
       setIsLoading(true);
       getUserVideos(user.uid)
         .then(fetchedVideos => {
-          // Sort videos client-side to avoid Firestore index requirements
-          const sortedVideos = fetchedVideos.sort((a, b) => {
-            const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : new Date(a.createdAt as any).getTime();
-            const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : new Date(b.createdAt as any).getTime();
-            return dateB - dateA;
-          });
-          setVideos(sortedVideos.map(v => ({
+          // The data is now pre-sorted by the Firestore query.
+          setVideos(fetchedVideos.map(v => ({
             ...v,
             createdAt: v.createdAt instanceof Timestamp ? v.createdAt.toDate() : new Date(v.createdAt as any),
           })) as VideoDocument[]);
         })
         .catch(error => {
           console.error("Failed to fetch user videos:", error);
-          // You could add a toast notification here for the user
+           toast({
+            title: "Could Not Fetch Videos",
+            description: "A database index may be required. Please check the browser console for an error link to create it in Firebase.",
+            variant: "destructive",
+            duration: 10000
+          });
         })
         .finally(() => {
           setIsLoading(false);
         });
     }
-  }, [user]);
+  }, [user, toast]);
 
   if (isLoading) {
     return (
