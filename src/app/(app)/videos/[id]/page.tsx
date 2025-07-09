@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Download, Trash2, Loader2, AlertTriangle, Info, Image as ImageIcon, FileTextIcon, PaletteIcon, TypeIcon as FontIcon, ClockIcon as DurationIcon, MusicIcon, Film } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Loader2, AlertTriangle, Info, Image as ImageIcon, FileTextIcon, PaletteIcon, TypeIcon as FontIcon, ClockIcon, MusicIcon, Film } from 'lucide-react';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import type { CompositionProps } from '@/remotion/MyVideo';
 import { useEffect, useState } from 'react';
@@ -243,7 +243,7 @@ export default function VideoDetailPage() {
             
             <dl className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
               <div className="flex justify-between">
-                <dt className="text-muted-foreground flex items-center"><DurationIcon className="mr-1.5 h-4 w-4"/>Total Duration:</dt>
+                <dt className="text-muted-foreground flex items-center"><ClockIcon className="mr-1.5 h-4 w-4"/>Total Duration:</dt>
                 <dd>{(video.totalDurationInFrames / 30).toFixed(1)}s</dd>
               </div>
               <div className="flex justify-between">
