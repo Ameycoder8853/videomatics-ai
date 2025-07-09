@@ -1,4 +1,3 @@
-
 'use client';
 import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,14 +15,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
-      </div>
-    );
-  }
-  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
@@ -33,7 +24,13 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </Link>
       </div>
       <div className="w-full max-w-sm sm:max-w-md">
-        {children}
+        {loading || user ? (
+           <div className="flex items-center justify-center h-96">
+            <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

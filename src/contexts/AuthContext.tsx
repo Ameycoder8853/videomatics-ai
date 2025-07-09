@@ -4,7 +4,6 @@ import type { User } from 'firebase/auth';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { auth } from '@/firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface AuthContextType {
   user: User | null;
@@ -29,20 +28,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // Show a loading state until Firebase auth is initialized
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="space-y-4 p-8 rounded-lg shadow-xl bg-card w-full max-w-md">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-8 w-1/2" />
-        </div>
-      </div>
-    );
-  }
-  
-  return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
+  // Return the provider immediately, allowing child components to handle the loading state.
+  // This prevents a full-page loader from blocking the UI and improves perceived performance.
+  return (
+    <AuthContext.Provider value={{ user, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
