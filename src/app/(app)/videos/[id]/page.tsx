@@ -200,7 +200,7 @@ export default function VideoDetailPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 p-4 sm:p-6">
           <div className="md:col-span-2 space-y-4 sm:space-y-6">
-            <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-sm mx-auto md:max-w-none" style={{aspectRatio: '9/16'}}>
+            <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-sm mx-auto md:max-w-md" style={{aspectRatio: '9/16'}}>
                 {video.status === 'completed' && video.scriptDetails ? (
                     <RemotionPlayer
                         key={video.id + (video.audioUri || '') + video.totalDurationInFrames} 
