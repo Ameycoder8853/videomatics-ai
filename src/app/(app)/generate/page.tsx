@@ -186,7 +186,7 @@ export default function GeneratePage() {
       if (localAudioUri) {
           setLoadingStep('Uploading voiceover...');
           toast({ title: 'Uploading voiceover...' });
-          audioDownloadUrl = await uploadDataUriToStorage(localAudioUri, `ai-short-video-files/${user.uid}/${videoId}/audio.wav`);
+          audioDownloadUrl = await uploadDataUriToStorage(localAudioUri, `properties/${user.uid}/${videoId}/audio.wav`);
       }
       
       const imageDownloadUrls: string[] = [];
@@ -199,7 +199,7 @@ export default function GeneratePage() {
           uploadedCount++;
           setLoadingStep(`Uploading image ${uploadedCount} of ${generatedImageUris.length}...`);
           toast({ title: `Uploading image ${uploadedCount} of ${generatedImageUris.length}...` });
-          const downloadUrl = await uploadDataUriToStorage(uri, `ai-short-video-files/${user.uid}/${videoId}/image_${i}.png`);
+          const downloadUrl = await uploadDataUriToStorage(uri, `properties/${user.uid}/${videoId}/image_${i}.png`);
           imageDownloadUrls.push(downloadUrl);
         } else {
           imageDownloadUrls.push(uri); // Keep placeholder URL as-is
@@ -238,7 +238,7 @@ export default function GeneratePage() {
       
       // Check for specific Firebase Storage error codes
       if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found' || error.code === 'storage/unknown') {
-        errorMessage = `Firebase Storage Error: ${error.message}. Please check your Storage Security Rules in the Firebase Console. They must allow writes for authenticated users to the 'ai-short-video-files/{userId}' path.`;
+        errorMessage = `Firebase Storage Error: ${error.message}. Please check your Storage Security Rules in the Firebase Console. They must allow writes for authenticated users to the 'properties/{userId}' path.`;
       }
 
       toast({
