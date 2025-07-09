@@ -3,7 +3,6 @@ import type {NextConfig} from 'next';
 // CachingStrategy might be useful if you customize withRemotion options,
 // but it's not strictly necessary for basic setup.
 // import { CachingStrategy } from '@remotion/next/dist/webpack-override';
-// import {withRemotion} from '@remotion/next'; // Commented out due to installation issues
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -78,7 +77,4 @@ const nextConfig: NextConfig = {
   // (Next.js does this by default, but ensure no conflicting configs)
 };
 
-// Wrap the Next.js config with withRemotion
-// You can pass options to withRemotion if needed, e.g., { publicDir: 'public' }
-// export default withRemotion(nextConfig); // Commented out due to installation issues
-export default nextConfig; // Exporting nextConfig directly
+export default nextConfig;
