@@ -57,7 +57,7 @@ export default function DashboardPage() {
     <div className="space-y-6 sm:space-y-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-7xl font-bold leading-tight tracking-tight font-headline">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-headline font-bold">Dashboard</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Manage your AI-generated videos.</p>
         </div>
         <Link href="/generate" passHref>
