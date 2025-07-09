@@ -2,52 +2,49 @@
 'use client';
 
 import { renderMedia, RenderMediaOnProgress } from '@remotion/renderer/client';
-import { getCompositions, Composition as RemotionCompositionInfo } from 'remotion'; 
-import type { CompositionProps } from '@/remotion/MyVideo'; 
-import { RemotionRoot } from '@/remotion/Root'; 
+import type { CompositionProps } from '@/remotion/MyVideo';
+import { MyVideoComposition, myVideoSchema } from '@/remotion/MyVideo'; // Import component and schema directly
 
 interface RenderParams {
   compositionId: string;
-  inputProps: CompositionProps; 
+  inputProps: CompositionProps;
   onProgress?: RenderMediaOnProgress;
-  totalDurationInFrames: number; // Add this to accept dynamic total duration
+  totalDurationInFrames: number;
 }
 
-export const handleClientSideRender = async ({ compositionId, inputProps, onProgress, totalDurationInFrames }: RenderParams): Promise<void> => {
+export const handleClientSideRender = async ({
+  compositionId,
+  inputProps,
+  onProgress,
+  totalDurationInFrames,
+}: RenderParams): Promise<void> => {
   try {
-    const compositions = await getCompositions(RemotionRoot, {
-      inputProps: inputProps, 
-    });
-
-    const compositionInfo = compositions.find((c) => c.id === compositionId);
-    if (!compositionInfo) {
-      throw new Error(`Composition with ID '${compositionId}' not found.`);
+    // Instead of calling getCompositions, we manually construct the composition object.
+    // This avoids using a Node.js-specific function in the browser.
+    if (compositionId !== 'MyVideo') {
+      throw new Error(
+        `This renderer is configured only for 'MyVideo', not '${compositionId}'.`
+      );
     }
 
-    // The totalDurationInFrames is now passed directly, ensuring it matches player
-    const finalDurationForRender = totalDurationInFrames;
-    console.log("handleClientSideRender: Using passed totalDurationInFrames for render:", finalDurationForRender);
+    const compositionToRender = {
+      id: compositionId,
+      component: MyVideoComposition,
+      durationInFrames: totalDurationInFrames,
+      fps: 30, // As defined in RemotionRoot
+      width: 1080, // As defined in RemotionRoot
+      height: 1920, // As defined in RemotionRoot
+      schema: myVideoSchema,
+      props: inputProps,
+    };
 
-    console.log("Final input props for renderMedia:", inputProps);
-    console.log("Final composition for renderMedia:", {
-        ...compositionInfo,
-        durationInFrames: finalDurationForRender, // Override with calculated total duration
-        props: inputProps,
-    });
-
+    console.log('Final composition object for renderMedia:', compositionToRender);
 
     const blob = await renderMedia({
-      composition: {
-        ...compositionInfo,
-        durationInFrames: finalDurationForRender, 
-        props: inputProps, 
-      },
+      composition: compositionToRender,
       codec: 'h264',
       imageFormat: 'jpeg',
       outputFormat: 'mp4',
-      fps: compositionInfo.fps || 30, 
-      width: compositionInfo.width, 
-      height: compositionInfo.height, 
       onProgress,
     });
 
@@ -59,9 +56,8 @@ export const handleClientSideRender = async ({ compositionId, inputProps, onProg
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
   } catch (error) {
     console.error('Error rendering video in browser:', error);
-    throw error; 
+    throw error;
   }
 };
