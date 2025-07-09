@@ -31,7 +31,6 @@ export default function DashboardPage() {
           })) as VideoDocument[]);
         })
         .catch(error => {
-          console.error("Failed to fetch user videos:", error);
           toast({
             title: "Could Not Fetch Videos",
             description: "A database index may be required. Please check the browser console for an error link to create it in Firebase.",

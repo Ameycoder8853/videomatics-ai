@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -18,7 +19,6 @@ interface UserCredits {
 // Mock function to fetch user credits
 const fetchUserCredits = async (userId: string): Promise<UserCredits> => {
   // In a real app, fetch this from Firestore
-  console.log('Fetching credits for user:', userId);
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
   return { current: 75, max: 100 }; // Mock data
 };
@@ -49,7 +49,6 @@ export function CreditSystem() {
         setCredits(data);
         setLoading(false);
       }).catch(err => {
-        console.error("Failed to fetch credits:", err);
         setLoading(false);
       });
 

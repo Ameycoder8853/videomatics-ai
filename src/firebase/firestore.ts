@@ -47,10 +47,8 @@ export const createVideoPlaceholder = async (userId: string): Promise<string> =>
       createdAt: Timestamp.now(),
       title: 'Processing...', // Placeholder title
     });
-    console.log("Video placeholder created with ID: ", docRef.id);
     return docRef.id;
   } catch (error) {
-    console.error("Error creating video placeholder: ", error);
     throw error;
   }
 };
@@ -60,9 +58,7 @@ export const updateVideoDocument = async (videoId: string, videoData: Partial<Om
     try {
         const docRef = doc(db, 'videos', videoId);
         await updateDoc(docRef, videoData);
-        console.log("Video document updated for ID: ", videoId);
     } catch (error) {
-        console.error("Error updating video document: ", error);
         throw error;
     }
 };
@@ -74,9 +70,7 @@ export const getUserVideos = async (userId: string): Promise<VideoDocument[]> =>
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VideoDocument));
   } catch (error: any) {
-    console.error("Error fetching user videos: ", error);
     if (error.code === 'failed-precondition' && error.message.includes('requires an index')) {
-      console.error("Firestore index required. Please create it using the link provided in the Firebase error message in your browser's console.");
       // This more specific error helps the user diagnose the problem.
       throw new Error("A database index is required for this query. Please check the browser console for a link to create it in your Firebase project.");
     }
@@ -92,11 +86,9 @@ export const getVideoDocument = async (videoId: string): Promise<VideoDocument |
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() } as VideoDocument;
     } else {
-      console.log("No such video document!");
       return null;
     }
   } catch (error) {
-    console.error("Error fetching video document: ", error);
     throw error;
   }
 };
@@ -109,33 +101,26 @@ export const deleteVideoAndAssets = async (video: VideoDocument): Promise<void> 
   }
 
   const { id: videoId, imageUris, audioUri } = video;
-  console.log(`Starting deletion for video ${videoId}...`);
 
   try {
     // Delete images from Storage in parallel using their full download URLs
     if (imageUris && imageUris.length > 0) {
-      console.log(`Deleting up to ${imageUris.length} images...`);
       const imageDeletePromises = imageUris
         .filter(url => url.includes('firebasestorage.googleapis.com'))
         .map(url => deleteFileFromStorage(url));
       await Promise.all(imageDeletePromises);
-      console.log("Image deletion process completed.");
     }
     
     // Delete audio from Storage using its full download URL
     if (audioUri && audioUri.includes('firebasestorage.googleapis.com')) {
-        console.log("Deleting audio...");
         await deleteFileFromStorage(audioUri);
-        console.log("Audio deleted from Storage.");
     }
 
     // Finally, delete the Firestore document
     const docRef = doc(db, 'videos', videoId);
     await deleteDoc(docRef);
-    console.log(`Firestore document ${videoId} deleted.`);
 
   } catch (error) {
-    console.error(`Error during deletion of video ${videoId}:`, error);
     throw error;
   }
 };

@@ -98,7 +98,6 @@ const generateVideoScriptFlow = ai.defineFlow(
         }
       });
     } catch (e: any) {
-      console.error("Invalid script structure from AI:", output, e.message);
       throw new Error(`AI returned an invalid script structure: ${e.message}`);
     }
     return output;

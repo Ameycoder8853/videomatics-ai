@@ -54,7 +54,6 @@ export default function VideoDetailPage() {
         }
         setLoading(false);
       }).catch(err => {
-        console.error("Error fetching video details:", err);
         toast({ title: "Error", description: "Could not fetch video details.", variant: "destructive"});
         setLoading(false);
       });
@@ -88,7 +87,6 @@ export default function VideoDetailPage() {
       });
       toast({ title: 'Video Rendered!', description: 'Your download should start automatically.' });
     } catch (error: any) {
-      console.error('Rendering failed:', error);
       toast({ title: 'Render Failed', description: error.message, variant: 'destructive'});
     } finally {
       setIsRendering(false);
@@ -108,7 +106,6 @@ export default function VideoDetailPage() {
         toast({ title: "Video Deleted", description: `"${video.title}" has been removed.`, variant: "default" });
         router.push('/dashboard');
     } catch (error: any) {
-        console.error("Error deleting video:", error);
         toast({ title: "Deletion Failed", description: error.message, variant: "destructive" });
     } finally {
         setIsDeleting(false);

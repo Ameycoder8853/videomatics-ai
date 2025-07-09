@@ -58,7 +58,6 @@ const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, 
         maxWidth: '800px',
         position: 'absolute',
         bottom: '12%',
-        left: '50%',
         transform: `translateX(-50%) translateY(${translateY}px)`,
         opacity,
         textShadow: '1px 1px 3px rgba(0,0,0,0.7)',
@@ -88,18 +87,6 @@ export const MyVideoComposition: React.FC<CompositionProps> = ({
   const finalImageUris = Array.from({ length: numScenes }, (_, i) => safeImageUris[i] || safeImageUris[0] || staticFile('images/placeholder-image1.png'));
   const finalSceneTexts = Array.from({ length: numScenes }, (_, i) => safeSceneTexts[i] || safeSceneTexts[0] || ' ');
 
-
-  if (typeof window !== 'undefined') {
-    console.log('MyVideoComposition Props:');
-    console.log('  audioUri (prop):', audioUri);
-    console.log('  musicUri (prop):', musicUri);
-    if (audioUri) console.log('  Resolved Audio URI for <Audio>:', audioUri.startsWith('/') ? staticFile(audioUri.substring(1)) : audioUri);
-    if (musicUri) console.log('  Resolved Music URI for <Audio>:', musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri);
-    console.log('  Number of scenes (finalImageUris):', finalImageUris.length);
-    console.log('  Number of scene texts (finalSceneTexts):', finalSceneTexts.length);
-    console.log('  imageDurationInFrames (per scene):', imageDurationInFrames);
-  }
-  
   const playMusic = musicUri && musicUri !== 'NO_MUSIC_SELECTED' && musicUri !== '';
 
   return (

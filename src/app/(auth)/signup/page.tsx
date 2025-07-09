@@ -51,7 +51,6 @@ export default function SignupPage() {
       });
       router.push('/dashboard'); // Redirect to dashboard after successful signup
     } catch (error: any) {
-      console.error('Signup failed:', error);
       toast({
         title: 'Signup Failed',
         description: error.message || 'An unexpected error occurred. Please try again.',

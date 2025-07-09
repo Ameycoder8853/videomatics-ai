@@ -38,8 +38,6 @@ export const handleClientSideRender = async ({
       props: inputProps,
     };
 
-    console.log('Final composition object for renderMedia:', compositionToRender);
-
     const blob = await renderMedia({
       composition: compositionToRender,
       codec: 'h264',
@@ -57,7 +55,6 @@ export const handleClientSideRender = async ({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error('Error rendering video in browser:', error);
     throw error;
   }
 };

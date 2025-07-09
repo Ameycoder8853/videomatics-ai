@@ -46,7 +46,6 @@ export default function LoginPage() {
       });
       router.push('/dashboard');
     } catch (error: any) {
-      console.error('Login failed:', error);
       toast({
         title: 'Login Failed',
         description: error.message || 'An unexpected error occurred. Please try again.',

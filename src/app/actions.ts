@@ -9,7 +9,6 @@ import wav from 'wav';
 // Action to generate video script
 export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
   try {
-    console.log('Generating script with input:', JSON.stringify(input));
     const result = await genVideoScriptFlow(input);
     if (!result || !result.title || !result.scenes || result.scenes.length === 0) {
       throw new Error('AI failed to generate a structured script with title and scenes.');
@@ -19,10 +18,8 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
             throw new Error(`Scene ${index + 1} is missing imagePrompt or contentText.`);
         }
     });
-    console.log('Script generated successfully:', result.title);
     return result;
   } catch (error: any) {
-    console.error('Error in generateScriptAction:', error);
     const message = error.message || 'Script generation failed due to an unexpected error.';
     throw new Error(`Script generation failed: ${message}`);
   }
@@ -35,7 +32,6 @@ interface GenerateImagesOutput {
   imageUrls: string[];
 }
 export async function generateImagesAction(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
-  console.log('generateImagesAction called with', input.prompts.length, 'prompts.');
   const imageUrls: string[] = [];
 
   if (input.prompts.length === 0) {
@@ -47,7 +43,6 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
 
     for (let i = 0; i < promptsToProcess.length; i++) {
       const imagePrompt = promptsToProcess[i];
-      console.log(`Generating image ${i + 1} of ${promptsToProcess.length} with prompt: "${imagePrompt}"`);
       try {
         const {media} = await ai.generate({
           model: 'googleai/gemini-2.0-flash-preview-image-generation',
@@ -64,14 +59,11 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
         });
 
         if (!media || !media.url) {
-          console.warn(`AI failed to generate image for prompt: "${imagePrompt}" or returned an invalid response.`);
           imageUrls.push(`https://placehold.co/1080x1920.png?text=Image+Failed+${i + 1}`);
         } else {
           imageUrls.push(media.url);
-          console.log(`Image ${i + 1} generated.`);
         }
       } catch (singleImageError: any) {
-        console.error(`Error generating image ${i + 1} for prompt "${imagePrompt}":`, singleImageError.message);
         imageUrls.push(`https://placehold.co/1080x1920.png?text=Error+Img+${i + 1}`);
       }
     }
@@ -79,10 +71,8 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
         // Only throw if ALL images failed and we actually tried to generate some
         throw new Error('AI failed to generate any images successfully.');
     }
-    console.log('All images processed. Total generated (or placeholders):', imageUrls.length);
     return { imageUrls };
   } catch (error: any) {
-    console.error('Error in generateImagesAction:', error);
     const errorMessage = error.message?.toLowerCase() || '';
     if (errorMessage.includes('user_location_invalid')) {
         throw new Error('Image generation is not available in your region.');
@@ -134,7 +124,6 @@ async function toWav(
 
 export async function generateAudioAction(input: GenerateAudioInput): Promise<GenerateAudioOutput> {
   try {
-    console.log(`Generating audio with Gemini TTS for text: "${input.text.substring(0, 100)}..."`);
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',
       config: {
@@ -163,11 +152,9 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
     const wavBase64 = await toWav(audioBuffer);
     const wavDataUri = `data:audio/wav;base64,${wavBase64}`;
 
-    console.log('Audio generated and converted to WAV successfully.');
     return { audioUrl: wavDataUri };
 
   } catch (error: any) {
-    console.error('Error in generateAudioAction (Gemini TTS):', error);
     throw new Error(`Audio generation failed: ${error.message || 'Unknown error contacting Gemini TTS'}`);
   }
 }
@@ -182,16 +169,13 @@ interface GenerateCaptionsOutput {
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
-    console.warn('AssemblyAI API key is not set. Skipping caption generation. Please add ASSEMBLYAI_API_KEY to your .env file.');
     return { transcript: "" }; // Return empty transcript instead of throwing an error
   }
    if (!input.audioDataUri || !input.audioDataUri.startsWith('data:audio')) {
-    console.error('Invalid audioDataUri for caption generation.');
     // Still throw here, because this is a developer error, not a config error
     throw new Error('Valid audio data URI is required for caption generation.');
   }
 
-  console.log('Generating captions with AssemblyAI for audio data URI...');
 
   try {
     const fetchResponse = await fetch(input.audioDataUri);
@@ -211,7 +195,6 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('AssemblyAI upload error:', uploadResponse.status, errorText);
       throw new Error(`AssemblyAI audio upload failed with status ${uploadResponse.status}: ${errorText}`);
     }
     const uploadResult = await uploadResponse.json();
@@ -219,7 +202,6 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     if (!audio_url) {
       throw new Error('AssemblyAI did not return an upload URL.');
     }
-    console.log('Audio uploaded to AssemblyAI:', audio_url);
 
     const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
@@ -232,7 +214,6 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
 
     if (!transcriptResponse.ok) {
       const errorText = await transcriptResponse.text();
-      console.error('AssemblyAI transcription submission error:', transcriptResponse.status, errorText);
       throw new Error(`AssemblyAI transcription submission failed with status ${transcriptResponse.status}: ${errorText}`);
     }
     const transcriptSubmissionResult = await transcriptResponse.json();
@@ -240,7 +221,6 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     if (!transcriptId) {
       throw new Error('AssemblyAI did not return a transcript ID.');
     }
-    console.log('Transcription submitted to AssemblyAI, ID:', transcriptId);
 
     let attempts = 0;
     const maxAttempts = 30; 
@@ -249,13 +229,11 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     while (attempts < maxAttempts) {
       attempts++;
       await delay(10000); 
-      console.log(`Polling AssemblyAI transcript status (attempt ${attempts})...`);
       const pollResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
         headers: { 'authorization': apiKey },
       });
       if (!pollResponse.ok) {
         const errorText = await pollResponse.text();
-        console.warn(`AssemblyAI polling error: ${pollResponse.status}: ${errorText}`);
         if (pollResponse.status === 404 && attempts > 5) { // If transcript ID is gone after a few tries
             throw new Error(`AssemblyAI transcript ID ${transcriptId} not found after multiple attempts.`);
         }
@@ -264,22 +242,18 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
       const pollResult = await pollResponse.json();
 
       if (pollResult.status === 'completed') {
-        console.log('AssemblyAI transcription completed.');
         if (!pollResult.text && pollResult.text !== '') { // Allow empty string for silent audio
             throw new Error('AssemblyAI transcription completed but returned no text field.');
         }
         return { transcript: pollResult.text || "" }; // Return empty string if text is null/undefined
       } else if (pollResult.status === 'failed' || pollResult.status === 'error') {
-        console.error('AssemblyAI transcription failed:', pollResult.error || 'Unknown error');
         throw new Error(`AssemblyAI transcription failed: ${pollResult.error || 'Unknown error'}`);
       }
-      console.log('AssemblyAI transcription status:', pollResult.status);
     }
 
     throw new Error('AssemblyAI transcription timed out after several attempts.');
 
   } catch (error: any) {
-    console.error('Error in generateCaptionsAction (AssemblyAI):', error);
     throw new Error(`Caption generation failed: ${error.message || 'Unknown error contacting AssemblyAI'}`);
   }
 }

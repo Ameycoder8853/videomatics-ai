@@ -31,7 +31,7 @@ export function Navbar() {
       await logOut();
       router.push('/login');
     } catch (error) {
-      console.error('Failed to log out:', error);
+      // Failed to log out
     }
   };
 

@@ -29,7 +29,6 @@ const getAudioDuration = (audioDataUri: string): Promise<number> => {
     audio.src = audioDataUri;
     const timer = setTimeout(() => {
       if (audio.readyState === 0 || isNaN(audio.duration)) {
-        console.warn("Audio metadata load timeout or invalid duration. Defaulting.");
         resolve(30); // Fallback duration
         audio.onerror = null; // Clean up to prevent late firing
         audio.onloadedmetadata = null;
@@ -42,7 +41,6 @@ const getAudioDuration = (audioDataUri: string): Promise<number> => {
     };
     audio.onerror = (e) => {
       clearTimeout(timer);
-      console.error("Error loading audio metadata:", e);
       reject(new Error('Failed to load audio metadata.'));
     };
   });
@@ -125,7 +123,6 @@ export default function GeneratePage() {
       try {
         actualAudioDurationInSeconds = await getAudioDuration(localAudioUri);
       } catch (audioError: any) {
-        console.warn("Could not measure audio duration:", audioError.message);
         toast({title: "Audio Duration Warning", description: "Using estimated timing. Video sync might be affected.", variant: "destructive"});
       }
       
@@ -186,7 +183,7 @@ export default function GeneratePage() {
       if (localAudioUri) {
           setLoadingStep('Uploading voiceover...');
           toast({ title: 'Uploading voiceover...' });
-          audioDownloadUrl = await uploadDataUriToStorage(localAudioUri, `properties/${user.uid}/${videoId}/audio.wav`);
+          audioDownloadUrl = await uploadDataUriToStorage(localAudioUri, `ai-short-video-files/${user.uid}/${videoId}/audio.wav`);
       }
       
       const imageDownloadUrls: string[] = [];
@@ -199,7 +196,7 @@ export default function GeneratePage() {
           uploadedCount++;
           setLoadingStep(`Uploading image ${uploadedCount} of ${generatedImageUris.length}...`);
           toast({ title: `Uploading image ${uploadedCount} of ${generatedImageUris.length}...` });
-          const downloadUrl = await uploadDataUriToStorage(uri, `properties/${user.uid}/${videoId}/image_${i}.png`);
+          const downloadUrl = await uploadDataUriToStorage(uri, `ai-short-video-files/${user.uid}/${videoId}/image_${i}.png`);
           imageDownloadUrls.push(downloadUrl);
         } else {
           imageDownloadUrls.push(uri); // Keep placeholder URL as-is
@@ -233,12 +230,11 @@ export default function GeneratePage() {
       toast({ title: 'Video Saved!', description: 'Your video is now available on your dashboard.' });
 
     } catch (error: any) {
-      console.error('Video generation process failed:', error);
       let errorMessage = error.message || 'An unknown error occurred.';
       
       // Check for specific Firebase Storage error codes
       if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found' || error.code === 'storage/unknown') {
-        errorMessage = `Firebase Storage Error: ${error.message}. Please check your Storage Security Rules in the Firebase Console. They must allow writes for authenticated users to the 'properties/{userId}' path.`;
+        errorMessage = `Firebase Storage Error: ${error.message}. Please check your Storage Security Rules in the Firebase Console. They must allow writes for authenticated users to the 'ai-short-video-files/{userId}' path.`;
       }
 
       toast({
@@ -259,7 +255,7 @@ export default function GeneratePage() {
             description: 'Video status set to "failed" in dashboard.',
           });
         } catch (updateError) {
-          console.error("Failed to update video status to 'failed':", updateError);
+          // Silent fail on this one
         }
       }
        setRemotionProps(null); 
@@ -287,7 +283,6 @@ export default function GeneratePage() {
       });
       toast({ title: 'Video Rendered!', description: 'Download should start automatically.' });
     } catch (error: any) {
-      console.error('Rendering failed:', error);
       toast({ title: 'Render Failed', description: error.message, variant: 'destructive'});
     } finally {
       setIsRendering(false);
@@ -341,7 +336,7 @@ export default function GeneratePage() {
 
             {!isLoading && remotionProps && (
               <>
-                <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] sm:max-w-[320px] mx-auto" style={{ aspectRatio: '9/16', height: 'auto' }}>
+                <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-sm mx-auto md:max-w-md" style={{ aspectRatio: '9/16', height: 'auto' }}>
                    <RemotionPlayer
                     key={JSON.stringify(remotionProps) + playerDurationInFrames} 
                     compositionId="MyVideo"
