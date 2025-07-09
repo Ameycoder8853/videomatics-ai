@@ -22,6 +22,27 @@ export const myVideoSchema = z.object({
 
 export type CompositionProps = z.infer<typeof myVideoSchema>;
 
+/**
+ * Safely resolves an asset path. If it's a full URL or already a Remotion static asset path,
+ * it returns it as is. Otherwise, it treats it as a file in the /public directory.
+ * This prevents `staticFile` from being called on a URL that is already a URL.
+ * @param assetPath The path or URL to the asset.
+ * @returns A resolved URL suitable for Remotion's <Img> or <Audio> components.
+ */
+const resolveAsset = (assetPath?: string): string | undefined => {
+  if (!assetPath) {
+    return undefined;
+  }
+  // Check if it's a full URL (http, https, data, blob) or a Remotion-processed asset path
+  if (assetPath.startsWith('http') || assetPath.startsWith('data:') || assetPath.startsWith('blob:') || assetPath.startsWith('/_next/static/')) {
+    return assetPath;
+  }
+  // Assume it's a local file in the public directory that needs `staticFile`
+  const path = assetPath.startsWith('/') ? assetPath.substring(1) : assetPath;
+  return staticFile(path);
+};
+
+
 const AnimatedText: React.FC<{ text: string, color: string, fontFamily: string, sceneDurationInFrames: number }> = ({ text, color, fontFamily, sceneDurationInFrames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -88,12 +109,14 @@ export const MyVideoComposition: React.FC<CompositionProps> = ({
   const finalImageUris = Array.from({ length: numScenes }, (_, i) => safeImageUris[i] || safeImageUris[0] || staticFile('images/placeholder-image1.png'));
   const finalSceneTexts = Array.from({ length: numScenes }, (_, i) => safeSceneTexts[i] || safeSceneTexts[0] || ' ');
 
-  const playMusic = musicUri && musicUri !== 'NO_MUSIC_SELECTED' && musicUri !== '';
+  const resolvedMusicUri = resolveAsset(musicUri);
+  const resolvedAudioUri = resolveAsset(audioUri);
+  const playMusic = resolvedMusicUri && musicUri !== 'NO_MUSIC_SELECTED';
 
   return (
     <AbsoluteFill style={{ backgroundColor: primaryColor.toString() }}>
-      {playMusic && musicUri && <Audio src={musicUri.startsWith('/') ? staticFile(musicUri.substring(1)) : musicUri} volume={0.1} loop />}
-      {audioUri && <Audio src={audioUri} volume={0.9} />} 
+      {playMusic && <Audio src={resolvedMusicUri!} volume={0.1} loop />}
+      {resolvedAudioUri && <Audio src={resolvedAudioUri} volume={0.9} />} 
 
       {finalImageUris.map((imageSrc, index) => {
         const textForThisSlide = finalSceneTexts[index];
@@ -127,11 +150,16 @@ export const MyVideoComposition: React.FC<CompositionProps> = ({
           { easing: Easing.inOut(Easing.ease), extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
         );
 
+        const finalImageSrc = resolveAsset(imageSrc);
+        if (!finalImageSrc) {
+            return null; // Don't render a sequence if the image source is invalid
+        }
+
         return (
           <Sequence key={`slide-${index}`} from={sequenceStartFrame} durationInFrames={imageDurationInFrames}>
             <AbsoluteFill style={{ overflow: 'hidden', opacity: imageOpacity }}>
               <Img
-                src={imageSrc.startsWith('/') ? staticFile(imageSrc.substring(1)) : imageSrc}
+                src={finalImageSrc}
                 style={{
                   width: '100%',
                   height: '100%',
