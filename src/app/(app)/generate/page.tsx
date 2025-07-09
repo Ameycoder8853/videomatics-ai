@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -57,6 +56,7 @@ export default function GeneratePage() {
   const [generatedAudioUri, setGeneratedAudioUri] = useState<string | null>(null);
   const [generatedCaptions, setGeneratedCaptions] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<number | null>(null);
   const [remotionProps, setRemotionProps] = useState<CompositionProps | null>(null);
   const [playerDurationInFrames, setPlayerDurationInFrames] = useState<number>(300); 
   const [formValues, setFormValues] = useState<VideoFormValues | null>(null); 
@@ -232,7 +232,6 @@ export default function GeneratePage() {
     } catch (error: any) {
       let errorMessage = error.message || 'An unknown error occurred.';
       
-      // Check for specific Firebase Storage error codes
       if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found' || error.code === 'storage/unknown') {
         errorMessage = `Firebase Storage Error: ${error.message}. Please check your Storage Security Rules in the Firebase Console. They must allow writes for authenticated users to the 'ai-short-video-files/{userId}' path.`;
       }
@@ -241,7 +240,7 @@ export default function GeneratePage() {
         title: 'Generation Failed',
         description: errorMessage,
         variant: 'destructive',
-        duration: 15000, // Give more time to read a complex error
+        duration: 15000,
       });
 
        if (videoId && user) {
@@ -255,7 +254,7 @@ export default function GeneratePage() {
             description: 'Video status set to "failed" in dashboard.',
           });
         } catch (updateError) {
-          // Silent fail on this one
+          // Silent fail
         }
       }
        setRemotionProps(null); 
@@ -271,6 +270,7 @@ export default function GeneratePage() {
       return;
     }
     setIsRendering(true);
+    setRenderProgress(0);
     toast({ title: 'Rendering video...', description: 'This might take a moment.'});
     try {
       await handleClientSideRender({
@@ -278,7 +278,7 @@ export default function GeneratePage() {
         inputProps: { 
             ...remotionProps,
         },
-        // Pass the calculated total duration here for the renderer
+        onProgress: ({ progress }) => setRenderProgress(progress),
         totalDurationInFrames: playerDurationInFrames,
       });
       toast({ title: 'Video Rendered!', description: 'Download should start automatically.' });
@@ -286,6 +286,7 @@ export default function GeneratePage() {
       toast({ title: 'Render Failed', description: error.message, variant: 'destructive'});
     } finally {
       setIsRendering(false);
+      setRenderProgress(null);
     }
   };
 
@@ -350,7 +351,9 @@ export default function GeneratePage() {
                 </div>
                 <Button onClick={onRenderVideo} disabled={isRendering || !remotionProps} className="w-full">
                   {isRendering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                  {isRendering ? 'Rendering...' : 'Download Video'}
+                  {isRendering 
+                    ? `Rendering... ${renderProgress !== null ? `${Math.round(renderProgress * 100)}%` : ''}` 
+                    : 'Download Video'}
                 </Button>
               </>
             )}

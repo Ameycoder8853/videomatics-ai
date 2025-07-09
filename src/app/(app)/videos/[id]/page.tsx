@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -37,6 +36,7 @@ export default function VideoDetailPage() {
   const videoId = params.id as string;
   
   const [isRendering, setIsRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: video, isLoading, isError } = useQuery({
@@ -64,6 +64,7 @@ export default function VideoDetailPage() {
       return;
     }
     setIsRendering(true);
+    setRenderProgress(0);
     toast({ title: 'Rendering video...', description: 'This might take a moment.'});
     try {
       const remotionPropsForRender: CompositionProps = {
@@ -81,13 +82,15 @@ export default function VideoDetailPage() {
       await handleClientSideRender({
         compositionId: 'MyVideo',
         inputProps: remotionPropsForRender,
-        totalDurationInFrames: video.totalDurationInFrames, // Pass total duration
+        onProgress: ({ progress }) => setRenderProgress(progress),
+        totalDurationInFrames: video.totalDurationInFrames,
       });
       toast({ title: 'Video Rendered!', description: 'Your download should start automatically.' });
     } catch (error: any) {
       toast({ title: 'Render Failed', description: error.message, variant: 'destructive'});
     } finally {
       setIsRendering(false);
+      setRenderProgress(null);
     }
   };
 
@@ -166,7 +169,9 @@ export default function VideoDetailPage() {
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                 <Button onClick={onRenderVideo} disabled={isRendering || video.status !== 'completed'} variant="outline" size="sm" className="w-full sm:w-auto">
                     {isRendering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    {isRendering ? 'Rendering...' : 'Download'}
+                    {isRendering 
+                      ? `Rendering... ${renderProgress !== null ? `${Math.round(renderProgress * 100)}%` : ''}` 
+                      : 'Download'}
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -195,7 +200,7 @@ export default function VideoDetailPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 p-4 sm:p-6">
           <div className="md:col-span-2 space-y-4 sm:space-y-6">
-            <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] mx-auto md:max-w-md" style={{aspectRatio: '9/16'}}>
+             <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] mx-auto" style={{aspectRatio: '9/16'}}>
                 {video.status === 'completed' && video.scriptDetails ? (
                     <RemotionPlayer
                         key={video.id + (video.audioUri || '') + video.totalDurationInFrames} 
