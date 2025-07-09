@@ -29,33 +29,20 @@ export const RemotionPlayer: React.FC<RemotionPlayerProps & RefAttributes<Player
   const compositionWidth = 1080;
   const compositionHeight = 1920;
   const fps = 30;
-  const durationInFrames = 300; // Default to 10 seconds
-
-  // Resolve local static files correctly
-  const resolvedInputProps = {
-    ...inputProps,
-    ...(inputProps.imageUri && inputProps.imageUri.startsWith('/') 
-        ? { imageUri: staticFile(inputProps.imageUri.substring(1)) } 
-        : {}),
-    ...(inputProps.audioUri && inputProps.audioUri.startsWith('/') 
-        ? { audioUri: staticFile(inputProps.audioUri.substring(1)) }
-        : {}),
-  };
+  // This default duration is for the studio, the actual duration is passed in playerProps from the page.
+  const durationInFrames = 300; 
 
   return (
     <Player
       component={MyVideoComposition} // This should be the component itself, not the ID.
-      // Or, if you want to use compositionId, you need to pass compositions to Player.
-      // For simplicity with one main composition, directly passing the component is easier.
-      // compositionId={compositionId} // This prop is for @remotion/lambda or more complex setups with multiple comps.
-      inputProps={resolvedInputProps}
+      inputProps={inputProps} // Pass props directly without modification
       durationInFrames={durationInFrames}
       compositionWidth={compositionWidth}
       compositionHeight={compositionHeight}
       fps={fps}
       controls // Show default player controls
       loop
-      {...playerProps} // Spread other player props like style, className etc.
+      {...playerProps} // Spread other player props like style, className, poster etc.
     />
   );
 };
