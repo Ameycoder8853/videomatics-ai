@@ -50,17 +50,18 @@ export const uploadDataUriToStorage = async (dataUri: string, path: string): Pro
 };
 
 
-// Function to delete a file
-export const deleteFileFromStorage = async (path: string): Promise<void> => {
+// Function to delete a file from a URL or path
+export const deleteFileFromStorage = async (pathOrUrl: string): Promise<void> => {
   try {
-    const storageRef = ref(storage, path);
+    // ref() can take a full gs:// or https:// URL, or a simple path.
+    const storageRef = ref(storage, pathOrUrl);
     await deleteObject(storageRef);
   } catch (error) {
     // Handle specific errors, e.g., object not found is not a failure in this context
     if ((error as any).code === 'storage/object-not-found') {
-      console.warn(`File to delete was not found at path: ${path}`);
+      console.warn(`File to delete was not found at path: ${pathOrUrl}`);
     } else {
-      console.error(`Error deleting file from ${path}:`, error);
+      console.error(`Error deleting file from ${pathOrUrl}:`, error);
       throw error;
     }
   }

@@ -108,30 +108,24 @@ export const deleteVideoAndAssets = async (video: VideoDocument): Promise<void> 
     throw new Error('Cannot delete video without ID or UserID');
   }
 
-  const { id: videoId, userId, imageUris, audioUri } = video;
+  const { id: videoId, imageUris, audioUri } = video;
   console.log(`Starting deletion for video ${videoId}...`);
 
   try {
-    // Delete images from Storage in parallel
+    // Delete images from Storage in parallel using their full download URLs
     if (imageUris && imageUris.length > 0) {
       console.log(`Deleting up to ${imageUris.length} images...`);
-      const imageDeletePromises = imageUris.map((url, index) => {
-        // Only attempt to delete files that were actually uploaded to Firebase Storage
-        if (url.includes('firebasestorage.googleapis.com')) {
-          const imagePath = `videos/${userId}/${videoId}/image_${index}.png`;
-          return deleteFileFromStorage(imagePath);
-        }
-        return Promise.resolve(); // Do nothing for placeholder URLs
-      });
+      const imageDeletePromises = imageUris
+        .filter(url => url.includes('firebasestorage.googleapis.com'))
+        .map(url => deleteFileFromStorage(url));
       await Promise.all(imageDeletePromises);
-       console.log("Image deletion process completed.");
+      console.log("Image deletion process completed.");
     }
     
-    // Delete audio from Storage
+    // Delete audio from Storage using its full download URL
     if (audioUri && audioUri.includes('firebasestorage.googleapis.com')) {
         console.log("Deleting audio...");
-        const audioPath = `videos/${userId}/${videoId}/audio.wav`;
-        await deleteFileFromStorage(audioPath);
+        await deleteFileFromStorage(audioUri);
         console.log("Audio deleted from Storage.");
     }
 
