@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -13,37 +13,29 @@ import { Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function VideosPage() {
-  const { user } = useAuth(); // The (app) layout ensures the user is available
-  const [videos, setVideos] = useState<VideoDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // The AppLayout handles the case where the user is not logged in.
-    if (user) {
-      setIsLoading(true);
-      getUserVideos(user.uid)
-        .then(fetchedVideos => {
-          // The data is now pre-sorted by the Firestore query.
-          setVideos(fetchedVideos.map(v => ({
+  const { data: videos, isLoading, isError } = useQuery({
+    queryKey: ['userVideos', user?.uid],
+    queryFn: async () => {
+        if (!user) return [];
+        const fetchedVideos = await getUserVideos(user.uid);
+        return fetchedVideos.map(v => ({
             ...v,
             createdAt: v.createdAt instanceof Timestamp ? v.createdAt.toDate() : new Date(v.createdAt as any),
-          })) as VideoDocument[]);
-        })
-        .catch(error => {
-          console.error("Failed to fetch user videos:", error);
-           toast({
+          })) as VideoDocument[];
+    },
+    enabled: !!user,
+    onError: (error) => {
+         toast({
             title: "Could Not Fetch Videos",
             description: "A database index may be required. Please check the browser console for an error link to create it in Firebase.",
             variant: "destructive",
             duration: 10000
           });
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
     }
-  }, [user, toast]);
+  });
 
   if (isLoading) {
     return (
@@ -52,6 +44,14 @@ export default function VideosPage() {
         <p className="mt-4 text-muted-foreground">Loading your videos...</p>
       </div>
     );
+  }
+
+  if (isError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
+            <p className="text-destructive">Failed to load videos. Please try again later.</p>
+        </div>
+      )
   }
 
   return (
@@ -69,7 +69,7 @@ export default function VideosPage() {
         </Link>
       </div>
 
-       {videos.length > 0 ? (
+       {videos && videos.length > 0 ? (
         <DashboardList videos={videos} />
       ) : (
         <Card className="text-center py-10 sm:py-12">

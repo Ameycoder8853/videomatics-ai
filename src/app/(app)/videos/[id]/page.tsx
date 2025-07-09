@@ -8,7 +8,8 @@ import Link from 'next/link';
 import { ArrowLeft, Download, Trash2, Loader2, AlertTriangle, Info, Image as ImageIcon, FileTextIcon, PaletteIcon, TypeIcon as FontIcon, ClockIcon, MusicIcon, Film } from 'lucide-react';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import type { CompositionProps } from '@/remotion/MyVideo';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getVideoDocument, VideoDocument, deleteVideoAndAssets } from '@/firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -35,30 +36,27 @@ export default function VideoDetailPage() {
   const { toast } = useToast();
   const videoId = params.id as string;
   
-  const [video, setVideo] = useState<VideoDocument | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isRendering, setIsRendering] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    if (videoId) {
-      setLoading(true);
-      getVideoDocument(videoId).then(data => {
-        if (data) {
-          setVideo({
+  const { data: video, isLoading, isError } = useQuery({
+    queryKey: ['video', videoId],
+    queryFn: async () => {
+      const data = await getVideoDocument(videoId);
+      if (data) {
+          return {
             ...data,
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt as any), // Ensure Date
-          } as VideoDocument); 
-        } else {
-          setVideo(null);
-        }
-        setLoading(false);
-      }).catch(err => {
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt as any),
+          } as VideoDocument;
+      }
+      return null;
+    },
+    enabled: !!videoId,
+    onError: () => {
         toast({ title: "Error", description: "Could not fetch video details.", variant: "destructive"});
-        setLoading(false);
-      });
     }
-  }, [videoId, toast]);
+  });
+
 
   const onRenderVideo = async () => {
     if (!video || !video.scriptDetails) {
@@ -113,11 +111,11 @@ export default function VideoDetailPage() {
   };
 
 
-  if (loading) {
+  if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-primary" /></div>;
   }
 
-  if (!video) {
+  if (!video || isError) {
     return (
       <div className="text-center py-10">
         <AlertTriangle className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-destructive mb-4" />
@@ -197,7 +195,7 @@ export default function VideoDetailPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 p-4 sm:p-6">
           <div className="md:col-span-2 space-y-4 sm:space-y-6">
-            <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-sm mx-auto md:max-w-md" style={{aspectRatio: '9/16'}}>
+            <div className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] mx-auto md:max-w-md" style={{aspectRatio: '9/16'}}>
                 {video.status === 'completed' && video.scriptDetails ? (
                     <RemotionPlayer
                         key={video.id + (video.audioUri || '') + video.totalDurationInFrames} 
