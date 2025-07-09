@@ -1,13 +1,15 @@
 'use client';
 import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation'; 
+import { useRouter, usePathname } from 'next/navigation'; 
 import { Gem, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter(); 
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && user) {
@@ -29,7 +31,17 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
           </div>
         ) : (
-          children
+          <AnimatePresence mode="wait">
+              <motion.div
+                  key={pathname}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                  {children}
+              </motion.div>
+          </AnimatePresence>
         )}
       </div>
     </div>
