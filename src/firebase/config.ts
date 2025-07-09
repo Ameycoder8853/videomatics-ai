@@ -4,21 +4,24 @@ import { getAuth, Auth } from 'firebase/auth';
 import { initializeFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
-// --- Primary Firebase Project (For Authentication and Firestore) ---
+// --- Project 1: For Authentication and Firestore Database ---
+// This is your primary project, `videomatic-ai-5c2b2`.
 const primaryFirebaseConfig = {
   apiKey: "AIzaSyBd3NejbNidk6b6eqwMfcLLpvnQRqgyzJU",
   authDomain: "videomatic-ai-5c2b2.firebaseapp.com",
   projectId: "videomatic-ai-5c2b2",
-  storageBucket: "videomatic-ai-5c2b2.appspot.com", // This will be ignored, but is part of the config.
+  storageBucket: "videomatic-ai-5c2b2.appspot.com", // This is ignored, as we use the secondary project for storage.
   messagingSenderId: "544423783139",
   appId: "1:544423783139:web:fe8e173e58b4c7a3b873d6",
   measurementId: "G-NE0VT2T105"
 };
 
-// --- Secondary Firebase Project (For Cloud Storage) ---
-// IMPORTANT: You must replace these placeholder values with the actual
-// configuration of the Firebase project you want to use for Storage.
-// You can find these details in that project's Settings.
+// --- Project 2: For Cloud Storage ---
+// This is your secondary project, the one you named "Videomatics AI".
+//
+// IMPORTANT: You MUST replace these placeholder values with the actual
+// configuration of the Firebase project you use for Storage.
+// Follow the steps in the instructions to find these values in your project's settings.
 const storageFirebaseConfig = {
   apiKey: "YOUR_STORAGE_PROJECT_API_KEY",
   authDomain: "YOUR_STORAGE_PROJECT_AUTH_DOMAIN",
@@ -28,10 +31,10 @@ const storageFirebaseConfig = {
   appId: "YOUR_STORAGE_PROJECT_APP_ID",
 };
 
+
 // --- Initialize Firebase Apps ---
 
 // Initialize Primary App (for Auth & Firestore)
-// We give it a unique name 'primary' to avoid conflicts if it's already initialized elsewhere.
 let app: FirebaseApp;
 const primaryAppName = 'primary';
 if (getApps().find(app => app.name === primaryAppName)) {
@@ -41,13 +44,20 @@ if (getApps().find(app => app.name === primaryAppName)) {
 }
 
 // Initialize Secondary App (for Storage)
-// We give it a unique name 'storage' to avoid conflicts.
 let storageApp: FirebaseApp;
 const storageAppName = 'storage';
 if (getApps().find(app => app.name === storageAppName)) {
   storageApp = getApp(storageAppName);
 } else {
-  storageApp = initializeApp(storageFirebaseConfig, storageAppName);
+  // Only initialize if the config is not a placeholder
+  if (storageFirebaseConfig.projectId !== "YOUR_STORAGE_PROJECT_ID") {
+    storageApp = initializeApp(storageFirebaseConfig, storageAppName);
+  } else {
+    // If the storage config is still the placeholder, we can't initialize it.
+    // We will fall back to using the primary app's storage, but log a clear warning.
+    console.warn("STORAGE_CONFIG_MISSING: Using primary project for storage. Please update `src/firebase/config.ts` with your dedicated storage project's credentials.");
+    storageApp = app; // Fallback to primary app
+  }
 }
 
 
