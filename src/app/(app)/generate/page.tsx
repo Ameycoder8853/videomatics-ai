@@ -347,6 +347,7 @@ export default function GeneratePage() {
                     durationInFrames={playerDurationInFrames}
                     fps={30} 
                     loop
+                    poster={remotionProps.imageUris?.[0]}
                   />
                 </div>
                 <Button onClick={onRenderVideo} disabled={isRendering || !remotionProps} className="w-full">

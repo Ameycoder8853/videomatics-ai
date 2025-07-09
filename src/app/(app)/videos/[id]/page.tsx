@@ -211,6 +211,7 @@ export default function VideoDetailPage() {
                         durationInFrames={video.totalDurationInFrames}
                         fps={30}
                         loop
+                        poster={video.thumbnailUrl}
                         data-ai-hint={video.scriptDetails?.scenes[0]?.imagePrompt || "video content"}
                     />
                 ) : (
