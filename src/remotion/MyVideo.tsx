@@ -34,12 +34,16 @@ const resolveAsset = (assetPath?: string): string | undefined => {
     return undefined;
   }
   // Check if it's a full URL (http, https, data, blob) or a Remotion-processed asset path
-  if (assetPath.startsWith('http') || assetPath.startsWith('data:') || assetPath.startsWith('blob:') || assetPath.startsWith('/_next/static/')) {
+  if (/^(https?|data|blob):/.test(assetPath) || assetPath.startsWith('/_next/static/')) {
     return assetPath;
   }
   // Assume it's a local file in the public directory that needs `staticFile`
   const path = assetPath.startsWith('/') ? assetPath.substring(1) : assetPath;
-  return staticFile(path);
+  try {
+    return staticFile(path);
+  } catch (err) {
+    return undefined;
+  }
 };
 
 
@@ -115,7 +119,7 @@ export const MyVideoComposition: React.FC<CompositionProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: primaryColor.toString() }}>
-      {playMusic && <Audio src={resolvedMusicUri!} volume={0.1} loop />}
+      {playMusic && <Audio src={resolvedMusicUri} volume={0.1} loop />}
       {resolvedAudioUri && <Audio src={resolvedAudioUri} volume={0.9} />} 
 
       {finalImageUris.map((imageSrc, index) => {

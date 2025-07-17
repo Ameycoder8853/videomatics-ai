@@ -6,9 +6,9 @@ import Image from 'next/image';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Edit3, Trash2, PlayCircle, AlertTriangle, Clock, ServerCrash } from 'lucide-react';
+import { Eye, PlayCircle, AlertTriangle, Clock, ServerCrash } from 'lucide-react';
 import type { VideoDocument } from '@/firebase/firestore'; 
-
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DisplayVideo extends Omit<VideoDocument, 'createdAt' | 'scriptDetails' | 'imageUris' | 'audioUri' | 'captions' | 'musicUri' | 'primaryColor' | 'secondaryColor' | 'fontFamily' | 'imageDurationInFrames' | 'totalDurationInFrames'> {
   id: string; 
@@ -63,9 +63,9 @@ export function DashboardList({ videos }: DashboardListProps) {
                 <Image
                   src={video.thumbnailUrl || "https://placehold.co/300x200.png"}
                   alt={video.title || 'Video thumbnail'}
-                  layout="fill"
-                  objectFit="cover"
-                  className="group-hover:opacity-80 transition-opacity duration-300"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover group-hover:opacity-80 transition-opacity duration-300"
                   data-ai-hint={video.dataAiHint || "video thumbnail"}
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -95,22 +95,33 @@ export function DashboardList({ videos }: DashboardListProps) {
                   <Eye className="mr-2 h-4 w-4" /> View
                 </Link>
               </Button>
-              {/* Edit/Delete are on detail page for now
-              <div className="flex space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" disabled> 
-                  <Edit3 className="h-4 w-4" />
-                  <span className="sr-only">Edit</span>
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" disabled> 
-                  <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Delete</span>
-                </Button>
-              </div>
-              */}
             </div>
           </CardFooter>
         </Card>
       ))}
     </div>
   );
+}
+
+
+export function DashboardListSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <Card key={i} className="flex flex-col overflow-hidden">
+          <CardHeader className="p-0 relative">
+             <Skeleton className="aspect-video w-full" />
+          </CardHeader>
+          <CardContent className="p-4 flex-grow space-y-2">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-5 w-1/4 rounded-full" />
+          </CardContent>
+          <CardFooter className="p-4 border-t bg-muted/20 dark:bg-card-foreground/5">
+            <Skeleton className="h-9 w-24" />
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
+  )
 }

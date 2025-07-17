@@ -1,14 +1,15 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Download, Trash2, Loader2, AlertTriangle, Info, Image as ImageIcon, FileTextIcon, PaletteIcon, TypeIcon as FontIcon, ClockIcon, MusicIcon, Film } from 'lucide-react';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import type { CompositionProps } from '@/remotion/MyVideo';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getVideoDocument, VideoDocument, deleteVideoAndAssets } from '@/firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -26,37 +27,56 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function VideoDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const videoId = params.id as string;
   
   const [isRendering, setIsRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: video, isLoading, isError } = useQuery({
     queryKey: ['video', videoId],
     queryFn: async () => {
       const data = await getVideoDocument(videoId);
-      if (data) {
-          return {
-            ...data,
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt as any),
-          } as VideoDocument;
+      if (!data) {
+        throw new Error("Video not found.");
       }
-      return null;
+      return {
+        ...data,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt as any),
+      } as VideoDocument;
     },
     enabled: !!videoId,
-    onError: () => {
-        toast({ title: "Error", description: "Could not fetch video details.", variant: "destructive"});
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: false,
+    onError: (err: any) => {
+        toast({ title: "Error", description: err.message || "Could not fetch video details.", variant: "destructive"});
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (videoToDelete: VideoDocument) => {
+        if (!videoToDelete.id || !user || videoToDelete.userId !== user.uid) {
+            throw new Error("Unauthorized or invalid video data for deletion.");
+        }
+        return deleteVideoAndAssets(videoToDelete);
+    },
+    onSuccess: (_, deletedVideo) => {
+        toast({ title: "Video Deleted", description: `"${deletedVideo.title}" has been removed.` });
+        queryClient.invalidateQueries({ queryKey: ['userVideos'] });
+        queryClient.removeQueries({ queryKey: ['video', deletedVideo.id] });
+        router.push('/dashboard');
+    },
+    onError: (error: any) => {
+        toast({ title: "Deletion Failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   const onRenderVideo = async () => {
     if (!video || !video.scriptDetails) {
@@ -94,31 +114,16 @@ export default function VideoDetailPage() {
     }
   };
 
-  const handleDeleteVideo = async () => {
-    if (!video || !video.id || !user) return;
-    if (video.userId !== user.uid) {
-        toast({ title: "Unauthorized", description: "You can only delete your own videos.", variant: "destructive" });
-        return;
-    }
-    setIsDeleting(true);
-    toast({title: "Deleting video and associated assets..."});
-    try {
-        await deleteVideoAndAssets(video);
-        toast({ title: "Video Deleted", description: `"${video.title}" has been removed.`, variant: "default" });
-        router.push('/dashboard');
-    } catch (error: any) {
-        toast({ title: "Deletion Failed", description: error.message, variant: "destructive" });
-    } finally {
-        setIsDeleting(false);
-    }
+  const handleDeleteVideo = () => {
+      if (!video) return;
+      deleteMutation.mutate(video);
   };
 
-
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-primary" /></div>;
+    return <VideoDetailSkeleton />;
   }
 
-  if (!video || isError) {
+  if (isError || !video) {
     return (
       <div className="text-center py-10">
         <AlertTriangle className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-destructive mb-4" />
@@ -175,8 +180,8 @@ export default function VideoDetailPage() {
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={isDeleting} size="sm" className="w-full sm:w-auto">
-                      {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    <Button variant="destructive" disabled={deleteMutation.isPending} size="sm" className="w-full sm:w-auto">
+                      {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                       Delete
                     </Button>
                   </AlertDialogTrigger>
@@ -217,6 +222,7 @@ export default function VideoDetailPage() {
                         durationInFrames={video.totalDurationInFrames}
                         fps={30}
                         loop
+                        poster={video.thumbnailUrl || video.imageUris?.[0]}
                         data-ai-hint={video.scriptDetails?.scenes[0]?.imagePrompt || "video content"}
                     />
                 ) : (
@@ -311,3 +317,59 @@ export default function VideoDetailPage() {
     </div>
   );
 }
+
+const VideoDetailSkeleton = () => (
+  <div className="space-y-6 sm:space-y-8">
+    <Skeleton className="h-6 w-48" />
+    <Card className="shadow-lg">
+      <CardHeader className="border-b p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
+          <div className="flex-grow space-y-2">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-4 w-1/4" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+            <Skeleton className="h-9 w-full sm:w-28" />
+            <Skeleton className="h-9 w-full sm:w-24" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 p-4 sm:p-6">
+        <div className="md:col-span-2 space-y-4 sm:space-y-6">
+          <Skeleton className="aspect-[9/16] w-full max-w-[280px] mx-auto rounded-lg" />
+          <div>
+            <Skeleton className="h-7 w-40 mb-3" />
+            <div className="space-y-3 max-h-96 overflow-hidden p-3 bg-muted/30 rounded-md border">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="p-3 border rounded-md bg-background shadow-sm space-y-2">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="md:col-span-1 space-y-4">
+          <Skeleton className="h-7 w-48 mb-3" />
+          <div className="space-y-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex justify-between">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-5 w-1/4" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <Skeleton className="h-6 w-40 mb-2" />
+            <div className="grid grid-cols-2 gap-2">
+              <Skeleton className="aspect-[9/16] rounded-md" />
+              <Skeleton className="aspect-[9/16] rounded-md" />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
