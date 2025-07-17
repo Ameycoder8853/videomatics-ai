@@ -1,3 +1,4 @@
+
 'use client';
 import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +18,20 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     }
   }, [user, loading, router]);
 
+  // If the user is authenticated, show a loader while we redirect to the dashboard.
+  // This prevents the login/signup form from briefly flashing before the redirect happens.
+  if (user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // If loading is finished and there's no user, or if we are still loading,
+  // render the children (login/signup page) immediately for a faster perceived load.
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
@@ -26,11 +41,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </Link>
       </div>
       <div className="w-full max-w-sm sm:max-w-md">
-        {loading || user ? (
-           <div className="flex items-center justify-center h-96">
-            <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
-          </div>
-        ) : (
           <AnimatePresence mode="wait">
               <motion.div
                   key={pathname}
@@ -42,7 +52,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                   {children}
               </motion.div>
           </AnimatePresence>
-        )}
       </div>
     </div>
   );
