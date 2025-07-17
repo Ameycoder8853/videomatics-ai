@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ReactNode, useEffect } from 'react';
@@ -26,23 +27,23 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-6 sm:py-8">
-        {loading || !user ? (
+        {loading ? (
           <div className="flex items-center justify-center h-full min-h-[calc(100vh-15rem)]">
             <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
           </div>
-        ) : (
+        ) : user ? (
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 15 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
             >
               {children}
             </motion.div>
           </AnimatePresence>
-        )}
+        ) : null}
       </main>
       <footer className="py-6 text-center text-muted-foreground text-sm border-t">
         © {new Date().getFullYear()} VividVerse. All rights reserved.

@@ -43,6 +43,7 @@ export default function VideoDetailPage() {
   const { data: video, isLoading, isError } = useQuery({
     queryKey: ['video', videoId],
     queryFn: async () => {
+      if (!videoId) return null;
       const data = await getVideoDocument(videoId);
       if (!data) {
         throw new Error("Video not found.");
