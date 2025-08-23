@@ -57,7 +57,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         {renderContent()}
       </main>
       <footer className="py-6 text-center text-muted-foreground text-sm border-t">
-        © {new Date().getFullYear()} VividVerse. All rights reserved.
+        © {new Date().getFullYear()} Videomatics AI. All rights reserved.
       </footer>
     </div>
   );
