@@ -1,31 +1,36 @@
+
 'use client';
 
 import { Player, PlayerRef } from '@remotion/player';
-import type { ComponentPropsWithoutRef, RefAttributes } from 'react';
-import type { AwsAmplifyOutputs } from '@remotion/lambda-common'; // For potential Lambda integration later
-import { MyVideoComposition, CompositionProps } from '@/remotion/MyVideo'; // Assuming MyVideo composition
-import { staticFile } from 'remotion';
+import { ComponentPropsWithoutRef, RefAttributes, useEffect, useState } from 'react';
+import { MyVideoComposition, CompositionProps } from '@/remotion/MyVideo';
 
 interface RemotionPlayerProps extends Omit<ComponentPropsWithoutRef<typeof Player>, 'component' | 'compositionWidth' | 'compositionHeight' | 'fps' | 'durationInFrames'> {
   compositionId: string; // ID of the composition to play
   inputProps: CompositionProps; // Props for the composition
 }
 
-// This is essential for Remotion to find your components.
-// It is also required for the Remotion Studio to work.
-// If you are using server-side rendering, you should not import this file on the server.
-import('../remotion/Root');
-
-
 export const RemotionPlayer: React.FC<RemotionPlayerProps & RefAttributes<PlayerRef>> = ({
   compositionId,
   inputProps,
   ...playerProps
 }) => {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    // This is essential for Remotion to find your components.
+    // It is also required for the Remotion Studio to work.
+    // We do it in a useEffect to avoid server-side execution and module loading issues.
+    import('../remotion/Root').then(() => {
+      setLoaded(true);
+    });
+  }, []);
+
+  if (!loaded) {
+    return null; // Or a loading spinner
+  }
   
-  // This example assumes a single composition 'MyVideo' is generally used,
-  // but you can make this more dynamic if needed.
-  // For this MVP, we hardcode dimensions and FPS based on what's typical for 'MyVideo'.
+  // This example assumes a single composition 'MyVideo' is generally used.
   const compositionWidth = 1080;
   const compositionHeight = 1920;
   const fps = 30;
@@ -35,12 +40,12 @@ export const RemotionPlayer: React.FC<RemotionPlayerProps & RefAttributes<Player
   return (
     <Player
       component={MyVideoComposition} // This should be the component itself, not the ID.
-      inputProps={inputProps} // Pass props directly without modification
+      inputProps={inputProps} // Pass props directly
       durationInFrames={durationInFrames}
       compositionWidth={compositionWidth}
       compositionHeight={compositionHeight}
       fps={fps}
-      controls // Show default player controls
+      controls
       loop
       {...playerProps} // Spread other player props like style, className, poster etc.
     />
