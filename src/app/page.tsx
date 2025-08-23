@@ -118,7 +118,7 @@ const footerLinks = {
 export default function LandingPage() {
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="bg-background text-foreground">
       <Navbar />
 
       <main
@@ -348,3 +348,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
