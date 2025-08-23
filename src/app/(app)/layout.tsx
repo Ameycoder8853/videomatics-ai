@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DashboardListSkeleton } from '@/components/DashboardList';
 
 const PageTransition = ({ children, pathname }: { children: ReactNode, pathname: string }) => (
   <AnimatePresence mode="wait">
@@ -34,17 +35,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router]);
 
   const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-full min-h-[calc(100vh-15rem)]">
-          <Loader2 className="animate-spin rounded-full h-16 w-16 text-primary" />
-        </div>
-      );
+    // If we are loading, or if we have finished loading but have no user yet (and will redirect),
+    // show a skeleton loader. This prevents a flash of nothing or a full page loader.
+    if (loading || !user) {
+      // Use a generic but representative skeleton. The dashboard skeleton is a good fit.
+      return <DashboardListSkeleton />;
     }
+    
+    // Only render the page content if we have a user.
     if (user) {
       return <PageTransition pathname={pathname}>{children}</PageTransition>;
     }
-    return null; // Don't render anything if no user and not loading (will be redirected)
+
+    return null; // Should be unreachable if logic is correct
   };
 
   return (
