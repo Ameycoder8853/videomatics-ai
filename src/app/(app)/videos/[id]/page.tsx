@@ -125,32 +125,39 @@ export default function VideoDetailPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 p-4 sm:p-6">
           <div className="md:col-span-2 space-y-4 sm:space-y-6">
-             <div 
-                className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] mx-auto bg-cover bg-center"
-                style={{ aspectRatio: '9/16' }}
-             >
-                {video.status === 'completed' && video.scriptDetails ? (
-                    <RemotionPlayer
-                        key={video.id + (video.audioUri || '') + video.totalDurationInFrames} 
-                        compositionId="MyVideo"
-                        inputProps={remotionPlayerProps}
-                        controls
-                        style={{ width: '100%', height: '100%' }}
-                        durationInFrames={video.totalDurationInFrames}
-                        fps={30}
-                        loop
-                        poster={thumbnailUrl}
-                        data-ai-hint={video.scriptDetails?.scenes[0]?.imagePrompt || "video content"}
-                    />
-                ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm p-4" style={{ backgroundImage: `url(${thumbnailUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                            <Film className="h-16 w-16 sm:h-24 sm:w-24 text-white/80 mb-4"/>
-                            <p className="text-sm sm:text-base text-white text-center font-semibold">Video Preview Unavailable</p>
-                            <p className="text-xs sm:text-sm text-white/80 capitalize">Status: {video.status}</p>
-                        </div>
-                    </div>
-                )}
+            <div 
+              className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] mx-auto bg-cover bg-center"
+              style={{ aspectRatio: '9/16' }}
+            >
+              {video.status === 'completed' && video.scriptDetails ? (
+                  <RemotionPlayer
+                      key={video.id + (video.audioUri || '') + video.totalDurationInFrames} 
+                      compositionId="MyVideo"
+                      inputProps={remotionPlayerProps}
+                      controls
+                      style={{ width: '100%', height: '100%' }}
+                      durationInFrames={video.totalDurationInFrames}
+                      fps={30}
+                      loop
+                      poster={thumbnailUrl}
+                      data-ai-hint={video.scriptDetails?.scenes[0]?.imagePrompt || "video content"}
+                  />
+              ) : (
+                  <div 
+                      className="w-full h-full flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm p-4" 
+                      style={{ 
+                          backgroundImage: `url(${thumbnailUrl})`, 
+                          backgroundSize: 'cover', 
+                          backgroundPosition: 'center' 
+                      }}
+                  >
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                          <Film className="h-16 w-16 sm:h-24 sm:w-24 text-white/80 mb-4"/>
+                          <p className="text-sm sm:text-base text-white text-center font-semibold">Video Preview Unavailable</p>
+                          <p className="text-xs sm:text-sm text-white/80 capitalize">Status: {video.status}</p>
+                      </div>
+                  </div>
+              )}
             </div>
 
             {video.scriptDetails && (

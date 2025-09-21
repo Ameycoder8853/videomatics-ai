@@ -165,7 +165,8 @@ export const useVideoGeneration = () => {
         musicUri: currentRemotionProps.musicUri, primaryColor: currentRemotionProps.primaryColor,
         secondaryColor: currentRemotionProps.secondaryColor, fontFamily: currentRemotionProps.fontFamily,
         imageDurationInFrames: finalSceneDurationInFrames, totalDurationInFrames: totalVideoDurationInFramesCalculated,
-        status: 'completed', thumbnailUrl: imageDownloadUrls.find(url => url.startsWith('https')) || 'https://placehold.co/300x200.png',
+        status: 'completed', 
+        thumbnailUrl: imageDownloadUrls.find(url => url.startsWith('https')) || localImageUris.find(url => url.startsWith('data:image')) || 'https://placehold.co/300x200.png',
       };
       
       await updateVideoDocument(videoId, videoToSave);
