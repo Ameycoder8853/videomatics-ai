@@ -20,6 +20,7 @@ import {
   Film,
 } from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { AnimatedHeroText } from "@/components/AnimatedHeroText";
 
 
 const whyChooseFeatures = [
@@ -127,21 +128,17 @@ export default function LandingPage() {
         <div className="space-y-20">
           {/* Hero Section */}
           <section className="text-center space-y-8 pt-16 md:pt-24">
-            <ScrollReveal yOffset={20}>
-              <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tight font-headline">
-                <span className="bg-gradient-to-r from-primary via-fuchsia-500 to-accent bg-clip-text text-transparent">
-                  Create Stunning Videos
-                </span>
-                <br />
-                with AI Magic
-              </h1>
-            </ScrollReveal>
-             <ScrollReveal yOffset={20} delay={0.1}>
+            <AnimatedHeroText 
+              text="Create Stunning Videos with AI Magic" 
+              className="text-5xl md:text-7xl font-bold leading-tight tracking-tight font-headline"
+              highlightedText="Create Stunning Videos"
+            />
+             <ScrollReveal yOffset={20} delay={0.8}>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
                 Transform your ideas into professional videos in minutes. No editing skills required. Just describe what you want, and our AI handles the rest.
               </p>
             </ScrollReveal>
-             <ScrollReveal yOffset={20} delay={0.2}>
+             <ScrollReveal yOffset={20} delay={0.9}>
               <div className="flex justify-center items-center flex-wrap gap-4 pt-4">
                 <Button asChild size="lg" className="bg-gradient-to-r from-primary to-fuchsia-600 hover:from-primary/90 hover:to-fuchsia-600/90 text-white font-semibold rounded-lg px-6 py-3 transition-transform hover:scale-105 shadow-lg shadow-primary/20">
                   <Link href="/dashboard">
@@ -348,5 +345,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
