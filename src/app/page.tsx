@@ -20,7 +20,7 @@ import {
   Film,
 } from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
-import { AnimatedHeroText } from "@/components/AnimatedHeroText";
+import { TextGenerateEffect } from "@/components/TextGenerateEffect";
 
 
 const whyChooseFeatures = [
@@ -128,10 +128,9 @@ export default function LandingPage() {
         <div className="space-y-20">
           {/* Hero Section */}
           <section className="text-center space-y-8 pt-16 md:pt-24">
-            <AnimatedHeroText 
-              text="Create Stunning Videos with AI Magic" 
-              className="text-5xl md:text-7xl font-bold leading-tight tracking-tight font-headline"
-              highlightedText="Create Stunning Videos"
+            <TextGenerateEffect
+              words="Transforming Concepts into Seamless User Experiences"
+              className="text-center text-[40px] md:text-5xl lg:text-6xl font-headline"
             />
              <ScrollReveal yOffset={20} delay={0.8}>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
