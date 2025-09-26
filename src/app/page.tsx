@@ -129,7 +129,7 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="text-center space-y-8 pt-16 md:pt-24">
             <TextGenerateEffect
-              words="Transforming Concepts into Seamless User Experiences"
+              words="From Idea to Impactful Video, Powered by AI"
               className="text-center text-[40px] md:text-5xl lg:text-6xl font-headline"
             />
              <ScrollReveal yOffset={20} delay={0.8}>

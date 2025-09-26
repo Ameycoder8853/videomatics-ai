@@ -32,9 +32,7 @@ export const TextGenerateEffect = ({
           return (
             <motion.span
               key={word + idx}
-              // The original code had "text-purple" which is not a valid tailwind class.
-              // I'm using "text-primary" to match your site's theme.
-              className={` ${idx > 3 ? "text-primary" : "dark:text-white text-black"
+              className={` ${idx > 4 ? "text-primary" : "dark:text-white text-black"
                 } opacity-0`}
             >
               {word}{" "}
