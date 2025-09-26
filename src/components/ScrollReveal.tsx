@@ -1,3 +1,4 @@
+
 'use client';
 
 import { motion } from 'framer-motion';
@@ -38,3 +39,5 @@ export const ScrollReveal = ({
     </motion.div>
   );
 };
+
+    

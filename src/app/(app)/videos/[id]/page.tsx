@@ -67,7 +67,7 @@ export default function VideoDetailPage() {
     imageDurationInFrames: video.imageDurationInFrames,
   };
 
-  const thumbnailUrl = video.thumbnailUrl || video.imageUris?.[0] || 'https://placehold.co/1080x1920.png';
+  const thumbnailUrl = video.thumbnailUrl || video.imageUris?.[0] || 'https://placehold.co/300x200.png';
 
   return (
     <div className="space-y-6 sm:space-y-8">
