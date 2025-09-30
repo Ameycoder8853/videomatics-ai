@@ -1,34 +1,22 @@
 
 
-const HEYGEN_API_URL = 'https://api.heygen.com/v2';
+const HEYGEN_API_URL = 'https://api.heygen.com/v1';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function createHeyGenVideo(scriptText: string, avatarId: string, apiKey: string): Promise<string | null> {
   try {
-    // Step 1: Create the video generation job
-    const createResponse = await fetch(`${HEYGEN_API_URL}/video/generate`, {
+    // Step 1: Create the video generation job using the v1 endpoint
+    const createResponse = await fetch(`${HEYGEN_API_URL}/video.generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`, // Corrected header for v1
       },
       body: JSON.stringify({
-        video_inputs: [
-          {
-            character: {
-              type: 'avatar',
-              avatar_id: avatarId,
-            },
-            voice: {
-              type: 'text',
-              input_text: scriptText,
-            },
-          },
-        ],
         test: false, // Set to false for actual generation
-        width: 1080,
-        height: 1920,
+        text: scriptText,
+        avatar_id: avatarId,
       }),
     });
 
@@ -44,17 +32,17 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
       throw new Error('HeyGen API did not return a video ID.');
     }
 
-    // Step 2: Poll for the video status until it's ready
+    // Step 2: Poll for the video status until it's ready (using v1 status endpoint)
     let attempts = 0;
     const maxAttempts = 60; // Poll for up to 5 minutes (60 * 5s = 300s)
     
     while (attempts < maxAttempts) {
       await delay(5000); // Wait 5 seconds between polls
       
-      const statusResponse = await fetch(`${HEYGEN_API_URL}/video_status?video_id=${videoId}`, {
+      const statusResponse = await fetch(`${HEYGEN_API_URL}/video_status.get?video_id=${videoId}`, {
         method: 'GET',
         headers: {
-          'x-api-key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
         },
       });
 
