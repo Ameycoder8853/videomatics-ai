@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 const avatarFormSchema = z.object({
   script: z.string().min(20, { message: 'Script must be at least 20 characters.' }).max(2000, { message: 'Script cannot exceed 2000 characters.' }),
-  avatarId: z.string().default('anna_lite-en-US'),
+  avatarId: z.string().default('aadhya_public-en-IN'),
 });
 
 export type AIAvatarFormValues = z.infer<typeof avatarFormSchema>;
@@ -27,12 +27,8 @@ interface AIAvatarFormProps {
 }
 
 const availableAvatars = [
-    { id: 'anna_lite-en-US', name: 'Anna (Professional)', image: 'https://picsum.photos/seed/anna/400/400' },
-    { id: 'josh_lite-en-US', name: 'Josh (Casual)', image: 'https://picsum.photos/seed/josh/400/400' },
-    { id: 'aadhya_public-en-IN', name: 'Aadhya (Indian)', image: 'https://picsum.photos/seed/aadhya/400/400' },
-    { id: 'veer_public-en-IN', name: 'Veer (Indian)', image: 'https://picsum.photos/seed/veer/400/400' },
-    { id: 'ryan_lite-en-US', name: 'Ryan (Presenter)', image: 'https://picsum.photos/seed/ryan/400/400' },
-    { id: 'mia_lite-en-US', name: 'Mia (Vlogger)', image: 'https://picsum.photos/seed/mia/400/400' },
+    { id: 'aadhya_public-en-IN', name: 'Aadhya', image: 'https://picsum.photos/seed/aadhya-new/400/400' },
+    { id: 'veer_public-en-IN', name: 'Veer', image: 'https://picsum.photos/seed/veer-new/400/400' },
 ]
 
 export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
@@ -40,7 +36,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
     resolver: zodResolver(avatarFormSchema),
     defaultValues: {
       script: 'Welcome to Videomatics AI! Here, you can transform your ideas into stunning videos with our cutting-edge artificial intelligence technology. Get started today and bring your vision to life.',
-      avatarId: 'anna_lite-en-US',
+      avatarId: 'aadhya_public-en-IN',
     },
   });
 
@@ -52,8 +48,8 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
           name="avatarId"
           render={({ field }) => (
             <FormItem className="space-y-3">
-              <FormLabel>Select Avatar</FormLabel>
-               <FormDescription>More avatars coming soon!</FormDescription>
+              <FormLabel>Select Indian AI Avatar</FormLabel>
+               <FormDescription>Choose an avatar for your video.</FormDescription>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -99,7 +95,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
           name="script"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Avatar Script</FormLabel>
+              <FormLabel>Explanatory Script</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Enter the text you want the avatar to speak..."
@@ -109,7 +105,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
                 />
               </FormControl>
               <FormDescription>
-                The AI will speak this text in the video.
+                The AI avatar will narrate this text in the video.
               </FormDescription>
               <FormMessage />
             </FormItem>
