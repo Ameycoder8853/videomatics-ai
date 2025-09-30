@@ -6,14 +6,9 @@ import { GenerateAvatarVideoInput } from '@/ai/flows/generate-avatar-video';
 import { ai } from '@/ai/genkit';
 import wav from 'wav';
 
-
-// These imports are required because we are no longer exporting the schemas from the flows
-import { z } from 'zod';
-
 // Action to generate video script
 export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<any> {
   try {
-    // Dynamically import the flow to avoid server-only code in client components
     const { generateVideoScript } = await import('@/ai/flows/generate-video-script');
     const result = await generateVideoScript(input);
 
@@ -27,8 +22,8 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
     });
     return result;
   } catch (error: any) {
-    const message = error.message || 'Script generation failed due to an unexpected error.';
-    throw new Error(`Script generation failed: ${message}`);
+    console.error('Error in generateScriptAction:', error);
+    throw new Error(`Script generation failed: ${error.message || 'An unexpected error occurred.'}`);
   }
 }
 
@@ -43,6 +38,7 @@ export async function generateAvatarVideoAction(input: GenerateAvatarVideoInput)
         }
         return result;
     } catch (error: any) {
+        console.error('Error in generateAvatarVideoAction:', error);
         throw new Error(`AI Avatar video generation failed: ${error.message}`);
     }
 }
@@ -55,14 +51,14 @@ interface GenerateImagesOutput {
   imageUrls: string[];
 }
 export async function generateImagesAction(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
-  const imageUrls: string[] = [];
+ try {
+    const imageUrls: string[] = [];
 
-  if (input.prompts.length === 0) {
-    return { imageUrls: [] };
-  }
+    if (input.prompts.length === 0) {
+      return { imageUrls: [] };
+    }
 
-  try {
-    const promptsToProcess = input.prompts.slice(0, 15); // Limit to 15 images for now
+    const promptsToProcess = input.prompts.slice(0, 15); // Limit to 15 images
 
     for (let i = 0; i < promptsToProcess.length; i++) {
       const imagePrompt = promptsToProcess[i];
@@ -91,17 +87,17 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
       }
     }
      if (imageUrls.filter(url => !url.includes('placehold.co')).length === 0 && promptsToProcess.length > 0) {
-        // Only throw if ALL images failed and we actually tried to generate some
         throw new Error('AI failed to generate any images successfully.');
     }
     return { imageUrls };
   } catch (error: any) {
+    console.error('Error in generateImagesAction:', error);
     const errorMessage = error.message?.toLowerCase() || '';
     if (errorMessage.includes('user_location_invalid')) {
         throw new Error('Image generation is not available in your region.');
     }
     if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || errorMessage.includes('429')) {
-        throw new Error('Image generation failed due to API rate limits or quota exceeded. Please wait or check your API plan.');
+        throw new Error('Image generation failed due to API rate limits. Please wait or check your plan.');
     }
     if (errorMessage.includes('prompt was blocked') || errorMessage.includes('safety settings')) {
         throw new Error('Image generation failed because a prompt was blocked by safety settings.');
@@ -153,7 +149,6 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            // See available voices here: https://cloud.google.com/text-to-speech/docs/voices
             prebuiltVoiceConfig: { voiceName: 'Algenib' }, 
           },
         },
@@ -164,20 +159,19 @@ export async function generateAudioAction(input: GenerateAudioInput): Promise<Ge
     if (!media || !media.url) {
       throw new Error('AI failed to generate audio or returned an invalid response.');
     }
-
-    // media.url is a data URI with base64 encoded raw PCM audio data.
+    
     const audioBuffer = Buffer.from(
       media.url.substring(media.url.indexOf(',') + 1),
       'base64'
     );
     
-    // Convert PCM to WAV so it's playable in browsers
     const wavBase64 = await toWav(audioBuffer);
     const wavDataUri = `data:audio/wav;base64,${wavBase64}`;
 
     return { audioUrl: wavDataUri };
 
   } catch (error: any) {
+    console.error('Error in generateAudioAction:', error);
     throw new Error(`Audio generation failed: ${error.message || 'Unknown error contacting Gemini TTS'}`);
   }
 }
@@ -193,13 +187,11 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
     console.warn('AssemblyAI API key not found, skipping caption generation.');
-    return { transcript: "" }; // Return empty transcript instead of throwing an error
+    return { transcript: "" };
   }
    if (!input.audioDataUri || !input.audioDataUri.startsWith('data:audio')) {
-    // Still throw here, because this is a developer error, not a config error
     throw new Error('Valid audio data URI is required for caption generation.');
   }
-
 
   try {
     const fetchResponse = await fetch(input.audioDataUri);
@@ -210,10 +202,7 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
 
     const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
-      headers: {
-        'authorization': apiKey,
-        'Content-Type': audioBlob.type || 'application/octet-stream', 
-      },
+      headers: { 'authorization': apiKey, 'Content-Type': audioBlob.type || 'application/octet-stream' },
       body: audioBlob,
     });
 
@@ -223,28 +212,21 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     }
     const uploadResult = await uploadResponse.json();
     const audio_url = uploadResult.upload_url;
-    if (!audio_url) {
-      throw new Error('AssemblyAI did not return an upload URL.');
-    }
+    if (!audio_url) throw new Error('AssemblyAI did not return an upload URL.');
 
     const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
-      headers: {
-        'authorization': apiKey,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'authorization': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ audio_url }),
     });
 
     if (!transcriptResponse.ok) {
       const errorText = await transcriptResponse.text();
-      throw new Error(`AssemblyAI transcription submission failed with status ${transcriptResponse.status}: ${errorText}`);
+      throw new Error(`AssemblyAI transcription submission failed: ${errorText}`);
     }
     const transcriptSubmissionResult = await transcriptResponse.json();
     const transcriptId = transcriptSubmissionResult.id;
-    if (!transcriptId) {
-      throw new Error('AssemblyAI did not return a transcript ID.');
-    }
+    if (!transcriptId) throw new Error('AssemblyAI did not return a transcript ID.');
 
     let attempts = 0;
     const maxAttempts = 30; 
@@ -257,30 +239,22 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
         headers: { 'authorization': apiKey },
       });
       if (!pollResponse.ok) {
-        const errorText = await pollResponse.text();
-        if (pollResponse.status === 404 && attempts > 5) { // If transcript ID is gone after a few tries
-            throw new Error(`AssemblyAI transcript ID ${transcriptId} not found after multiple attempts.`);
-        }
         console.warn(`Polling AssemblyAI failed (attempt ${attempts}): Status ${pollResponse.status}`);
         continue; 
       }
       const pollResult = await pollResponse.json();
 
       if (pollResult.status === 'completed') {
-        if (!pollResult.text && pollResult.text !== '') { // Allow empty string for silent audio
-            throw new Error('AssemblyAI transcription completed but returned no text field.');
-        }
-        return { transcript: pollResult.text || "" }; // Return empty string if text is null/undefined
+        return { transcript: pollResult.text || "" };
       } else if (pollResult.status === 'failed' || pollResult.status === 'error') {
         throw new Error(`AssemblyAI transcription failed: ${pollResult.error || 'Unknown error'}`);
       }
     }
-
-    throw new Error('AssemblyAI transcription timed out after several attempts.');
-
+    throw new Error('AssemblyAI transcription timed out.');
   } catch (error: any) {
     console.error(`Caption generation failed: ${error.message}`);
-    // Instead of throwing, return empty string to allow video generation to continue
     return { transcript: '' };
   }
 }
+
+    
