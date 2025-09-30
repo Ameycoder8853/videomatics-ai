@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { generateAvatarVideoAction } from '@/app/actions';
 import type { AIAvatarFormValues } from '@/components/AIAvatarForm';
 import { createVideoPlaceholder, updateVideoDocument } from '@/firebase/firestore';
