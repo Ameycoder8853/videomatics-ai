@@ -270,7 +270,7 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
 
     while (attempts < maxAttempts) {
       attempts++;
-      await delay(10000); 
+      await delay(5000); 
       const pollResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
         headers: { 'authorization': apiKey },
       });
@@ -302,5 +302,3 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     return { transcript: '' };
   }
 }
-
-    
