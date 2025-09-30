@@ -13,18 +13,22 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { createHeyGenVideo } from '@/lib/heygen';
 
-export const GenerateAvatarVideoInputSchema = z.object({
+const GenerateAvatarVideoInputSchema = z.object({
   script: z.string().describe('The text script for the avatar to speak.'),
   avatarId: z.string().optional().describe('The ID of the avatar to use.'),
 });
 export type GenerateAvatarVideoInput = z.infer<typeof GenerateAvatarVideoInputSchema>;
 
-export const GenerateAvatarVideoOutputSchema = z.object({
+const GenerateAvatarVideoOutputSchema = z.object({
   videoUrl: z.string().describe('The URL of the generated avatar video.'),
 });
 export type GenerateAvatarVideoOutput = z.infer<typeof GenerateAvatarVideoOutputSchema>;
 
 export async function generateAvatarVideo(input: GenerateAvatarVideoInput): Promise<GenerateAvatarVideoOutput> {
+  const heygenApiKey = process.env.HEYGEN_API_KEY;
+  if (!heygenApiKey) {
+    throw new Error('HEYGEN_API_KEY is not set in environment variables.');
+  }
   return generateAvatarVideoFlow(input);
 }
 
@@ -38,6 +42,7 @@ const generateAvatarVideoFlow = ai.defineFlow(
     
     const heygenApiKey = process.env.HEYGEN_API_KEY;
     if (!heygenApiKey) {
+      // This check is redundant due to the one in the wrapper, but it's good practice for the flow itself.
       throw new Error('HEYGEN_API_KEY is not set in environment variables.');
     }
 
