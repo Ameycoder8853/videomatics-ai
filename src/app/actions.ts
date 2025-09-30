@@ -10,26 +10,8 @@ import wav from 'wav';
 // These imports are required because we are no longer exporting the schemas from the flows
 import { z } from 'zod';
 
-const SceneSchema = z.object({
-  imagePrompt: z.string().describe('A detailed prompt for an AI image generator to create a realistic visual for the scene. Describe the scene, subjects, environment, mood, and style. Make it suitable for a portrait (1080x1920) aspect ratio image.'),
-  contentText: z.string().describe('The voiceover script or text content that will be narrated or displayed during this scene. Keep it concise for a short video scene.'),
-});
-
-const GenerateVideoScriptOutputSchema = z.object({
-  title: z.string().describe('A catchy title for the video.'),
-  scenes: z.array(SceneSchema).describe('An array of scenes, each with an image prompt and content text. For a "short" video, aim for 3-5 scenes. For "medium", 5-8 scenes. For "long", 8-15 scenes.'),
-});
-type GenerateVideoScriptOutput = z.infer<typeof GenerateVideoScriptOutputSchema>;
-
-
-const GenerateAvatarVideoOutputSchema = z.object({
-  videoUrl: z.string().describe('The URL of the generated avatar video.'),
-});
-type GenerateAvatarVideoOutput = z.infer<typeof GenerateAvatarVideoOutputSchema>;
-
-
 // Action to generate video script
-export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
+export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<any> {
   try {
     // Dynamically import the flow to avoid server-only code in client components
     const { generateVideoScript } = await import('@/ai/flows/generate-video-script');
@@ -38,7 +20,7 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
     if (!result || !result.title || !result.scenes || result.scenes.length === 0) {
       throw new Error('AI failed to generate a structured script with title and scenes.');
     }
-    result.scenes.forEach((scene, index) => {
+    result.scenes.forEach((scene: any, index: number) => {
         if (!scene.imagePrompt || !scene.contentText) {
             throw new Error(`Scene ${index + 1} is missing imagePrompt or contentText.`);
         }
@@ -51,7 +33,7 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
 }
 
 // Action to generate AI Avatar video
-export async function generateAvatarVideoAction(input: GenerateAvatarVideoInput): Promise<GenerateAvatarVideoOutput> {
+export async function generateAvatarVideoAction(input: GenerateAvatarVideoInput): Promise<any> {
     try {
         const { generateAvatarVideo } = await import('@/ai/flows/generate-avatar-video');
         const result = await generateAvatarVideo(input);
