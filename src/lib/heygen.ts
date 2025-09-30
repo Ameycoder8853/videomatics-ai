@@ -28,10 +28,8 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string = '
           },
         ],
         test: false, // Set to false for actual generation
-        dimension: {
-            width: 1080,
-            height: 1920,
-        }
+        width: 1080,
+        height: 1920,
       }),
     });
 
