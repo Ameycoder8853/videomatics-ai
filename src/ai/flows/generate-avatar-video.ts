@@ -5,8 +5,6 @@
  * @fileOverview Generates a video from text using an AI avatar.
  *
  * - generateAvatarVideo - A function that handles the avatar video generation.
- * - GenerateAvatarVideoInput - The input type for the generateAvatarVideo function.
- * - GenerateAvatarVideoOutput - The return type for the generateAvatarVideo function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -25,6 +23,7 @@ const GenerateAvatarVideoOutputSchema = z.object({
 export type GenerateAvatarVideoOutput = z.infer<typeof GenerateAvatarVideoOutputSchema>;
 
 export async function generateAvatarVideo(input: GenerateAvatarVideoInput): Promise<GenerateAvatarVideoOutput> {
+  // We check for the key here to fail early before even starting the flow.
   const heygenApiKey = process.env.HEYGEN_API_KEY;
   if (!heygenApiKey) {
     throw new Error('HEYGEN_API_KEY is not set in environment variables.');
@@ -40,12 +39,14 @@ const generateAvatarVideoFlow = ai.defineFlow(
   },
   async (input) => {
     
+    // Get the API key from environment variables within the flow.
     const heygenApiKey = process.env.HEYGEN_API_KEY;
     if (!heygenApiKey) {
       // This check is redundant due to the one in the wrapper, but it's good practice for the flow itself.
       throw new Error('HEYGEN_API_KEY is not set in environment variables.');
     }
 
+    // Call the HeyGen video creation function and correctly pass the apiKey.
     const videoUrl = await createHeyGenVideo(input.script, input.avatarId, heygenApiKey);
 
     if (!videoUrl) {
