@@ -44,7 +44,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
     resolver: zodResolver(avatarFormSchema),
     defaultValues: {
       topic: 'A short, inspiring story about achieving a difficult goal.',
-      avatarId: 'aadhya_public-en-IN',
+      avatarId: 'aadhya_public-in',
       duration: 'short',
     },
   });
@@ -108,7 +108,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
                <FormDescription>Choose an avatar for your video.</FormDescription>
               <FormControl>
                 <RadioGroup
-                  onValuechange={field.onChange}
+                  onValueChange={field.onChange}
                   defaultValue={field.value}
                   className="grid grid-cols-2 sm:grid-cols-3 gap-4"
                   disabled={isLoading}
