@@ -19,7 +19,7 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string = '
             character: {
               type: 'avatar',
               avatar_id: avatarId,
-              avatar_style: 'normal', 
+              // avatar_style was an invalid parameter and has been removed.
             },
             voice: {
               type: 'text',
