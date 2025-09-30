@@ -2,6 +2,7 @@
 'use server';
 
 import { generateVideoScript as genVideoScriptFlow, GenerateVideoScriptInput, GenerateVideoScriptOutput } from '@/ai/flows/generate-video-script';
+import { generateAvatarVideo as genAvatarVideoFlow, GenerateAvatarVideoInput, GenerateAvatarVideoOutput } from '@/ai/flows/generate-avatar-video';
 import { ai } from '@/ai/genkit';
 import wav from 'wav';
 
@@ -24,6 +25,20 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
     throw new Error(`Script generation failed: ${message}`);
   }
 }
+
+// Action to generate AI Avatar video
+export async function generateAvatarVideoAction(input: GenerateAvatarVideoInput): Promise<GenerateAvatarVideoOutput> {
+    try {
+        const result = await genAvatarVideoFlow(input);
+        if (!result || !result.videoUrl) {
+            throw new Error('AI failed to generate an avatar video.');
+        }
+        return result;
+    } catch (error: any) {
+        throw new Error(`AI Avatar video generation failed: ${error.message}`);
+    }
+}
+
 
 interface GenerateImagesInput {
   prompts: string[];
