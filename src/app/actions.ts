@@ -1,16 +1,40 @@
 
 'use server';
 
-import { generateVideoScript as genVideoScriptFlow, GenerateVideoScriptInput, GenerateVideoScriptOutput } from '@/ai/flows/generate-video-script';
-import { generateAvatarVideo as genAvatarVideoFlow, GenerateAvatarVideoInput, GenerateAvatarVideoOutput } from '@/ai/flows/generate-avatar-video';
+import { GenerateVideoScriptInput } from '@/ai/flows/generate-video-script';
+import { GenerateAvatarVideoInput } from '@/ai/flows/generate-avatar-video';
 import { ai } from '@/ai/genkit';
 import wav from 'wav';
+
+
+// These imports are required because we are no longer exporting the schemas from the flows
+import { z } from 'zod';
+
+const SceneSchema = z.object({
+  imagePrompt: z.string().describe('A detailed prompt for an AI image generator to create a realistic visual for the scene. Describe the scene, subjects, environment, mood, and style. Make it suitable for a portrait (1080x1920) aspect ratio image.'),
+  contentText: z.string().describe('The voiceover script or text content that will be narrated or displayed during this scene. Keep it concise for a short video scene.'),
+});
+
+const GenerateVideoScriptOutputSchema = z.object({
+  title: z.string().describe('A catchy title for the video.'),
+  scenes: z.array(SceneSchema).describe('An array of scenes, each with an image prompt and content text. For a "short" video, aim for 3-5 scenes. For "medium", 5-8 scenes. For "long", 8-15 scenes.'),
+});
+type GenerateVideoScriptOutput = z.infer<typeof GenerateVideoScriptOutputSchema>;
+
+
+const GenerateAvatarVideoOutputSchema = z.object({
+  videoUrl: z.string().describe('The URL of the generated avatar video.'),
+});
+type GenerateAvatarVideoOutput = z.infer<typeof GenerateAvatarVideoOutputSchema>;
 
 
 // Action to generate video script
 export async function generateScriptAction(input: GenerateVideoScriptInput): Promise<GenerateVideoScriptOutput> {
   try {
-    const result = await genVideoScriptFlow(input);
+    // Dynamically import the flow to avoid server-only code in client components
+    const { generateVideoScript } = await import('@/ai/flows/generate-video-script');
+    const result = await generateVideoScript(input);
+
     if (!result || !result.title || !result.scenes || result.scenes.length === 0) {
       throw new Error('AI failed to generate a structured script with title and scenes.');
     }
@@ -29,7 +53,9 @@ export async function generateScriptAction(input: GenerateVideoScriptInput): Pro
 // Action to generate AI Avatar video
 export async function generateAvatarVideoAction(input: GenerateAvatarVideoInput): Promise<GenerateAvatarVideoOutput> {
     try {
-        const result = await genAvatarVideoFlow(input);
+        const { generateAvatarVideo } = await import('@/ai/flows/generate-avatar-video');
+        const result = await generateAvatarVideo(input);
+
         if (!result || !result.videoUrl) {
             throw new Error('AI failed to generate an avatar video.');
         }
@@ -60,10 +86,9 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
       const imagePrompt = promptsToProcess[i];
       try {
         const {media} = await ai.generate({
-          model: 'googleai/gemini-2.0-flash-preview-image-generation',
+          model: 'googleai/imagen-4.0-fast-generate-001',
           prompt: `Generate a high-quality, visually appealing image suitable for a video, based on the following theme or keywords: "${imagePrompt}". The image should be in portrait orientation (1080x1920). Ensure it is safe for all audiences.`,
           config: {
-            responseModalities: ['TEXT', 'IMAGE'],
             safetySettings: [ // Stricter safety settings
               { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
               { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -79,6 +104,7 @@ export async function generateImagesAction(input: GenerateImagesInput): Promise<
           imageUrls.push(media.url);
         }
       } catch (singleImageError: any) {
+        console.error(`Error generating image ${i + 1}:`, singleImageError);
         imageUrls.push(`https://placehold.co/1080x1920.png?text=Error+Img+${i + 1}`);
       }
     }
@@ -184,6 +210,7 @@ interface GenerateCaptionsOutput {
 export async function generateCaptionsAction(input: GenerateCaptionsInput): Promise<GenerateCaptionsOutput> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
+    console.warn('AssemblyAI API key not found, skipping caption generation.');
     return { transcript: "" }; // Return empty transcript instead of throwing an error
   }
    if (!input.audioDataUri || !input.audioDataUri.startsWith('data:audio')) {
@@ -252,6 +279,7 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
         if (pollResponse.status === 404 && attempts > 5) { // If transcript ID is gone after a few tries
             throw new Error(`AssemblyAI transcript ID ${transcriptId} not found after multiple attempts.`);
         }
+        console.warn(`Polling AssemblyAI failed (attempt ${attempts}): Status ${pollResponse.status}`);
         continue; 
       }
       const pollResult = await pollResponse.json();
@@ -269,6 +297,10 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     throw new Error('AssemblyAI transcription timed out after several attempts.');
 
   } catch (error: any) {
-    throw new Error(`Caption generation failed: ${error.message || 'Unknown error contacting AssemblyAI'}`);
+    console.error(`Caption generation failed: ${error.message}`);
+    // Instead of throwing, return empty string to allow video generation to continue
+    return { transcript: '' };
   }
 }
+
+    
