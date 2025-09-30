@@ -46,8 +46,12 @@ const generateAvatarVideoFlow = ai.defineFlow(
       throw new Error('HEYGEN_API_KEY is not set in environment variables.');
     }
 
+    // Ensure a default avatarId is used if none is provided.
+    // This was the source of the "Bad Request" error.
+    const avatarIdToUse = input.avatarId || 'aadhya_public-en-IN';
+
     // Call the HeyGen video creation function and correctly pass the apiKey.
-    const videoUrl = await createHeyGenVideo(input.script, input.avatarId, heygenApiKey);
+    const videoUrl = await createHeyGenVideo(input.script, avatarIdToUse, heygenApiKey);
 
     if (!videoUrl) {
         throw new Error('Failed to generate video or retrieve video URL from HeyGen.');
