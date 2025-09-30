@@ -28,8 +28,8 @@ interface AIAvatarFormProps {
 }
 
 const availableAvatars = [
-    { id: 'aadhya_public-en-IN', name: 'Aadhya', image: 'https://picsum.photos/seed/female/400/533', dataAiHint: 'female avatar' },
-    { id: 'veer_public-en-IN', name: 'Veer', image: 'https://picsum.photos/seed/male/400/533', dataAiHint: 'male avatar' },
+    { id: 'aadhya_public-en-IN', name: 'Aadhya', image: 'https://storage.googleapis.com/heygen-web-public-assets/users/263592/creatives/preset_avatar/aadhya_public-en-IN_240123_1080_close.png', dataAiHint: 'female avatar' },
+    { id: 'veer_public-en-IN', name: 'Veer', image: 'https://storage.googleapis.com/heygen-web-public-assets/users/263592/creatives/preset_avatar/veer_public-en-IN_240123_1080_close.png', dataAiHint: 'male avatar' },
 ];
 
 const videoDurations = [
