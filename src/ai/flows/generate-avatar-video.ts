@@ -23,7 +23,6 @@ const GenerateAvatarVideoOutputSchema = z.object({
 export type GenerateAvatarVideoOutput = z.infer<typeof GenerateAvatarVideoOutputSchema>;
 
 export async function generateAvatarVideo(input: GenerateAvatarVideoInput): Promise<GenerateAvatarVideoOutput> {
-  // We check for the key here to fail early before even starting the flow.
   const heygenApiKey = process.env.HEYGEN_API_KEY;
   if (!heygenApiKey) {
     throw new Error('HEYGEN_API_KEY is not set in environment variables.');
@@ -38,11 +37,8 @@ const generateAvatarVideoFlow = ai.defineFlow(
     outputSchema: GenerateAvatarVideoOutputSchema,
   },
   async (input) => {
-    
-    // Get the API key from environment variables within the flow.
     const heygenApiKey = process.env.HEYGEN_API_KEY;
     if (!heygenApiKey) {
-      // This check is redundant due to the one in the wrapper, but it's good practice for the flow itself.
       throw new Error('HEYGEN_API_KEY is not set in environment variables.');
     }
 
@@ -50,7 +46,6 @@ const generateAvatarVideoFlow = ai.defineFlow(
     // This was the source of the "Bad Request" error.
     const avatarIdToUse = input.avatarId || 'aadhya_public-en-IN';
 
-    // Call the HeyGen video creation function and correctly pass the apiKey.
     const videoUrl = await createHeyGenVideo(input.script, avatarIdToUse, heygenApiKey);
 
     if (!videoUrl) {
