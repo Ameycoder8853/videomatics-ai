@@ -256,5 +256,3 @@ export async function generateCaptionsAction(input: GenerateCaptionsInput): Prom
     return { transcript: '' };
   }
 }
-
-    
