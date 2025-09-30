@@ -19,6 +19,11 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
           avatar: {
             avatar_id: avatarId,
             avatar_style: "normal"
+          },
+          voice: {
+            // This was the missing parameter causing the BAD REQUEST error.
+            // Specifying a voice is required when using input_text.
+            voice_id: "5e78313a52f7487c88a8a47941459a93" // Example: A high-quality English (India) voice
           }
         }]
       }),
