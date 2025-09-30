@@ -80,8 +80,8 @@ export default function GeneratePage() {
   
   // Consolidate results for display
   const finalScriptResult = scriptResult || avatarScriptResult;
-  const finalAudioUri = generatedAudioUri || avatarAudioUri;
-  const finalCaptions = generatedCaptions ?? avatarCaptions;
+  const finalAudioUri = generatedAudioUri || avatarAudioUri; // avatarAudioUri will be null now
+  const finalCaptions = generatedCaptions ?? avatarCaptions; // avatarCaptions will be null now
 
 
   return (

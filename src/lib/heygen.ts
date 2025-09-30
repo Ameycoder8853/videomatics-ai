@@ -4,7 +4,7 @@ const HEYGEN_API_URL = 'https://api.heygen.com/v2';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export async function createHeyGenVideo(scriptText: string, avatarId: string = 'josh_lite-en-US', apiKey: string): Promise<string | null> {
+export async function createHeyGenVideo(scriptText: string, avatarId: string, apiKey: string): Promise<string | null> {
   try {
     // Step 1: Create the video generation job
     const createResponse = await fetch(`${HEYGEN_API_URL}/video/generate`, {
@@ -19,7 +19,6 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string = '
             character: {
               type: 'avatar',
               avatar_id: avatarId,
-              // avatar_style was an invalid parameter and has been removed.
             },
             voice: {
               type: 'text',
