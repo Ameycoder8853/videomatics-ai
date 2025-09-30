@@ -28,7 +28,7 @@ export async function generateAvatarVideo(input: GenerateAvatarVideoInput): Prom
   return generateAvatarVideoFlow(input);
 }
 
-export const generateAvatarVideoFlow = ai.defineFlow(
+const generateAvatarVideoFlow = ai.defineFlow(
   {
     name: 'generateAvatarVideoFlow',
     inputSchema: GenerateAvatarVideoInputSchema,
