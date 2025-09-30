@@ -1,5 +1,4 @@
 
-
 const HEYGEN_API_URL = 'https://api.heygen.com/v1';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -11,28 +10,42 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`, // Corrected header for v1
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        test: false, // Set to false for actual generation
+        test: false, 
         text: scriptText,
         avatar_id: avatarId,
       }),
     });
 
     if (!createResponse.ok) {
-      const errorData = await createResponse.json();
-      throw new Error(`HeyGen API error (create): ${errorData.message || createResponse.statusText}`);
+        let errorDetails = `Status: ${createResponse.status}, StatusText: ${createResponse.statusText}`;
+        try {
+            // Check content type before parsing
+            const contentType = createResponse.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await createResponse.json();
+                errorDetails = `HeyGen API error (create): ${errorData.message || createResponse.statusText}`;
+            } else {
+                const errorText = await createResponse.text();
+                errorDetails = `HeyGen API returned non-JSON response: ${errorText.substring(0, 200)}...`;
+            }
+        } catch (e) {
+            // Fallback if parsing fails for any reason
+            errorDetails = `Could not parse HeyGen error response. Status: ${createResponse.status}`;
+        }
+        throw new Error(errorDetails);
     }
 
     const createData = await createResponse.json();
-    const videoId = createData.data.video_id;
+    const videoId = createData.data?.video_id;
 
     if (!videoId) {
       throw new Error('HeyGen API did not return a video ID.');
     }
 
-    // Step 2: Poll for the video status until it's ready (using v1 status endpoint)
+    // Step 2: Poll for the video status until it's ready
     let attempts = 0;
     const maxAttempts = 60; // Poll for up to 5 minutes (60 * 5s = 300s)
     
@@ -47,14 +60,13 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
       });
 
       if (!statusResponse.ok) {
-        // Continue polling even if one status check fails
         console.warn(`HeyGen status check failed with status: ${statusResponse.status}`);
         attempts++;
         continue;
       }
 
       const statusData = await statusResponse.json();
-      const videoStatus = statusData.data.status;
+      const videoStatus = statusData.data?.status;
 
       if (videoStatus === 'completed') {
         return statusData.data.video_url;
