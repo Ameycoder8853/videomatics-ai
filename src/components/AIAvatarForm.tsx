@@ -12,11 +12,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const avatarFormSchema = z.object({
-  script: z.string().min(20, { message: 'Script must be at least 20 characters.' }).max(2000, { message: 'Script cannot exceed 2000 characters.' }),
+  topic: z.string().min(10, { message: 'Topic must be at least 10 characters.' }).max(200, { message: 'Topic cannot exceed 200 characters.' }),
   avatarId: z.string().default('aadhya_public-en-IN'),
+  duration: z.string().optional(),
 });
 
 export type AIAvatarFormValues = z.infer<typeof avatarFormSchema>;
@@ -29,20 +30,75 @@ interface AIAvatarFormProps {
 const availableAvatars = [
     { id: 'aadhya_public-en-IN', name: 'Aadhya', image: 'https://picsum.photos/seed/aadhya-new/400/400' },
     { id: 'veer_public-en-IN', name: 'Veer', image: 'https://picsum.photos/seed/veer-new/400/400' },
-]
+];
+
+const videoDurations = [
+  { value: 'short', label: 'Short (~3-5 scenes)' },
+  { value: 'medium', label: 'Medium (~5-8 scenes)' },
+  { value: 'long', label: 'Long (~8-15 scenes)' },
+];
+
 
 export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
   const form = useForm<AIAvatarFormValues>({
     resolver: zodResolver(avatarFormSchema),
     defaultValues: {
-      script: 'Welcome to Videomatics AI! Here, you can transform your ideas into stunning videos with our cutting-edge artificial intelligence technology. Get started today and bring your vision to life.',
+      topic: 'A short, inspiring story about achieving a difficult goal.',
       avatarId: 'aadhya_public-en-IN',
+      duration: 'short',
     },
   });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="topic"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Video Topic</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., 'The importance of cybersecurity for small businesses'"
+                  className="resize-y min-h-[100px]"
+                  {...field}
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormDescription>
+                The AI will generate a script based on this topic.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="duration"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Desired Video Length (AI Guided)</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select desired length category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {videoDurations.map((duration) => (
+                    <SelectItem key={duration.value} value={duration.value}>
+                      {duration.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="avatarId"
@@ -52,7 +108,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
                <FormDescription>Choose an avatar for your video.</FormDescription>
               <FormControl>
                 <RadioGroup
-                  onValueChange={field.onChange}
+                  onValuechange={field.onChange}
                   defaultValue={field.value}
                   className="grid grid-cols-2 sm:grid-cols-3 gap-4"
                   disabled={isLoading}
@@ -89,29 +145,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
             </FormItem>
           )}
         />
-      
-        <FormField
-          control={form.control}
-          name="script"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Explanatory Script</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Enter the text you want the avatar to speak..."
-                  className="resize-y min-h-[150px]"
-                  {...field}
-                  disabled={isLoading}
-                />
-              </FormControl>
-              <FormDescription>
-                The AI avatar will narrate this text in the video.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+        
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

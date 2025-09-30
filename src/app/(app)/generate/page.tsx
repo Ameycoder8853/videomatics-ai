@@ -15,7 +15,7 @@ import { myVideoSchema } from '@/remotion/MyVideo';
 import { staticFile } from 'remotion';
 import { GenerateResults } from '@/components/GenerateResults';
 import { useVideoGeneration } from '@/hooks/use-video-generation';
-import { useAvatarVideoGeneration } from '@/hooks/use-avatar-video-generation';
+import { useAvatarGenerationFlow } from '@/hooks/use-avatar-generation-flow';
 
 export default function GeneratePage() {
   const { toast } = useToast();
@@ -33,13 +33,16 @@ export default function GeneratePage() {
     generateVideo: generateSlideshowVideo,
   } = useVideoGeneration();
 
-  // State for AI Avatar Videos
+  // State for AI Avatar Videos (New comprehensive flow)
   const {
     isLoading: isAvatarLoading,
     loadingStep: avatarLoadingStep,
+    avatarScriptResult,
+    avatarAudioUri,
+    avatarCaptions,
     generatedAvatarVideoUrl,
     generateAvatarVideo,
-  } = useAvatarVideoGeneration();
+  } = useAvatarGenerationFlow();
 
   const [isRendering, setIsRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState<number | null>(null);
@@ -74,6 +77,12 @@ export default function GeneratePage() {
   };
 
   const isLoading = isSlideshowLoading || isAvatarLoading;
+  
+  // Consolidate results for display
+  const finalScriptResult = scriptResult || avatarScriptResult;
+  const finalAudioUri = generatedAudioUri || avatarAudioUri;
+  const finalCaptions = generatedCaptions ?? avatarCaptions;
+
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -115,7 +124,7 @@ export default function GeneratePage() {
                 />
               </TabsContent>
               <TabsContent value="avatar" className="mt-6">
-                 <CardDescription className="text-xs sm:text-sm mb-4">Describe the script for your AI avatar.</CardDescription>
+                 <CardDescription className="text-xs sm:text-sm mb-4">Describe the topic for your AI avatar video.</CardDescription>
                  <AIAvatarForm 
                     onSubmit={generateAvatarVideo}
                     isLoading={isAvatarLoading}
@@ -192,8 +201,7 @@ export default function GeneratePage() {
               </>
             )}
             
-
-            {!isLoading && !remotionProps && !generatedAvatarVideoUrl && !scriptResult && ( 
+            {!isLoading && !remotionProps && !generatedAvatarVideoUrl && !finalScriptResult && ( 
                  <div className="flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-lg min-h-[250px] sm:min-h-[300px] bg-muted/50">
                     <Film className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-3 sm:mb-4" />
                     <p className="text-sm sm:text-base text-muted-foreground">Your video preview will appear here.</p>
@@ -201,7 +209,7 @@ export default function GeneratePage() {
                  </div>
             )}
 
-            {!isLoading && !remotionProps && !generatedAvatarVideoUrl && scriptResult && ( 
+            {!isLoading && !remotionProps && !generatedAvatarVideoUrl && (finalScriptResult || finalAudioUri || finalCaptions) && ( 
                  <div className="flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-lg min-h-[250px] sm:min-h-[300px] bg-destructive/10 text-destructive-foreground">
                     <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-4" />
                     <p className="font-semibold text-sm sm:text-base">Preview Unavailable</p>
@@ -210,10 +218,10 @@ export default function GeneratePage() {
             )}
 
             <GenerateResults 
-              scriptResult={scriptResult}
-              generatedImages={generatedImages}
-              generatedAudioUri={generatedAudioUri}
-              generatedCaptions={generatedCaptions}
+              scriptResult={finalScriptResult}
+              generatedImages={generatedImages} // Only slideshows have images
+              generatedAudioUri={finalAudioUri}
+              generatedCaptions={finalCaptions}
             />
           </CardContent>
         </Card>

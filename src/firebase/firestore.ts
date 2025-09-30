@@ -18,12 +18,12 @@ export interface VideoDocument {
   scriptDetails?: GenerateVideoScriptOutput; // Contains title and scenes array
 
   // URLs for generated assets stored in Firebase Storage
-  imageUris: string[]; // Array of generated image download URLs
+  imageUris: string[]; // Array of image URLs for slideshows, OR a single-element array with the avatar video URL
   audioUri: string; // Generated audio download URL
   captions?: string; // Generated captions text
   musicUri?: string; // Selected background music URI
 
-  // Remotion composition props
+  // Remotion composition props (mainly for slideshows)
   primaryColor: string;
   secondaryColor: string;
   fontFamily: string;
@@ -32,7 +32,7 @@ export interface VideoDocument {
 
   status: 'pending' | 'processing' | 'completed' | 'failed';
   createdAt: Timestamp | Date;
-  thumbnailUrl?: string; // URL of the first image, for display
+  thumbnailUrl?: string; // URL of the first image, or a placeholder
   errorMessage?: string; // Optional: if status is 'failed'
 }
 
@@ -46,6 +46,15 @@ export const createVideoPlaceholder = async (userId: string): Promise<string> =>
       status: 'processing',
       createdAt: Timestamp.now(),
       title: 'Processing...', // Placeholder title
+      // Add empty/default values for other required fields to satisfy rules/types
+      topic: 'N/A',
+      imageUris: [],
+      audioUri: '',
+      primaryColor: '',
+      secondaryColor: '',
+      fontFamily: '',
+      imageDurationInFrames: 0,
+      totalDurationInFrames: 0,
     });
     return docRef.id;
   } catch (error) {
@@ -103,12 +112,13 @@ export const deleteVideoAndAssets = async (video: VideoDocument): Promise<void> 
   const { id: videoId, imageUris, audioUri } = video;
 
   try {
-    // Delete images from Storage in parallel using their full download URLs
+    // `imageUris` can contain slideshow images or the final avatar video.
+    // This logic handles both cases.
     if (imageUris && imageUris.length > 0) {
-      const imageDeletePromises = imageUris
-        .filter(url => url.includes('firebasestorage.googleapis.com'))
+      const deletePromises = imageUris
+        .filter(url => url && url.includes('firebasestorage.googleapis.com'))
         .map(url => deleteFileFromStorage(url));
-      await Promise.all(imageDeletePromises);
+      await Promise.all(deletePromises);
     }
     
     // Delete audio from Storage using its full download URL
