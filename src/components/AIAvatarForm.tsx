@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { staticFile } from 'remotion';
 
 const avatarFormSchema = z.object({
   topic: z.string().min(10, { message: 'Topic must be at least 10 characters.' }).max(200, { message: 'Topic cannot exceed 200 characters.' }),
@@ -28,8 +29,8 @@ interface AIAvatarFormProps {
 }
 
 const availableAvatars = [
-    { id: 'aadhya_public-en-IN', name: 'Aadhya', image: 'https://picsum.photos/seed/aadhya-new/400/400' },
-    { id: 'veer_public-en-IN', name: 'Veer', image: 'https://picsum.photos/seed/veer-new/400/400' },
+    { id: 'aadhya_public-en-IN', name: 'Aadhya', image: staticFile('/avatars/female-avatar.png'), dataAiHint: 'female avatar' },
+    { id: 'veer_public-en-IN', name: 'Veer', image: staticFile('/avatars/male-avatar.png'), dataAiHint: 'male avatar' },
 ];
 
 const videoDurations = [
@@ -132,6 +133,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
                             fill
                             className="object-cover"
                             sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                            data-ai-hint={avatar.dataAiHint}
                          />
                          <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-black/50 text-white text-xs text-center truncate">
                             {avatar.name}
