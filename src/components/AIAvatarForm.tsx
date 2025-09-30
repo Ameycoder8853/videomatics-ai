@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { staticFile } from 'remotion';
 
 const avatarFormSchema = z.object({
   topic: z.string().min(10, { message: 'Topic must be at least 10 characters.' }).max(200, { message: 'Topic cannot exceed 200 characters.' }),
@@ -29,8 +28,8 @@ interface AIAvatarFormProps {
 }
 
 const availableAvatars = [
-    { id: 'aadhya_public-en-IN', name: 'Aadhya', image: staticFile('/avatars/female-avatar.png'), dataAiHint: 'female avatar' },
-    { id: 'veer_public-en-IN', name: 'Veer', image: staticFile('/avatars/male-avatar.png'), dataAiHint: 'male avatar' },
+    { id: 'aadhya_public-en-IN', name: 'Aadhya', image: '/avatars/female-avatar.png', dataAiHint: 'female avatar' },
+    { id: 'veer_public-en-IN', name: 'Veer', image: '/avatars/male-avatar.png', dataAiHint: 'male avatar' },
 ];
 
 const videoDurations = [
