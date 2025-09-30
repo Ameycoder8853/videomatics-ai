@@ -44,7 +44,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
     resolver: zodResolver(avatarFormSchema),
     defaultValues: {
       topic: 'A short, inspiring story about achieving a difficult goal.',
-      avatarId: 'aadhya_public-in',
+      avatarId: 'aadhya_public-en-IN',
       duration: 'short',
     },
   });
