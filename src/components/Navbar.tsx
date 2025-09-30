@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logOut } from '@/firebase/auth';
 import { LayoutDashboard, Video, PlusCircle, LogOut, UserCircle, Gem, Sun, Moon, Home, Menu } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useState } from 'react';
 
 export function Navbar() {
@@ -128,14 +128,16 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] flex flex-col p-0">
-              <div className="p-4 border-b">
-                 <SheetClose asChild>
-                   <Link href="/" className="flex items-center space-x-2">
-                      <Gem className="h-6 w-6 text-primary" />
-                      <span className="font-bold font-headline text-lg">Videomatics AI</span>
-                    </Link>
-                  </SheetClose>
-              </div>
+               <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
+                  <SheetDescription className="sr-only">Main navigation links for mobile devices.</SheetDescription>
+                   <SheetClose asChild>
+                     <Link href="/" className="flex items-center space-x-2">
+                        <Gem className="h-6 w-6 text-primary" />
+                        <span className="font-bold font-headline text-lg">Videomatics AI</span>
+                      </Link>
+                    </SheetClose>
+                </SheetHeader>
               <nav className="flex flex-col p-4 space-y-1 flex-1">
                 <SheetClose asChild>
                   <Link href="/" legacyBehavior passHref>
@@ -218,3 +220,5 @@ export function Navbar() {
     </header>
   );
 }
+
+    
