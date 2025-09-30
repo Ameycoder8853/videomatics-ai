@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, Wand2 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
+
 
 const avatarFormSchema = z.object({
   script: z.string().min(20, { message: 'Script must be at least 20 characters.' }).max(2000, { message: 'Script cannot exceed 2000 characters.' }),
@@ -23,9 +27,12 @@ interface AIAvatarFormProps {
 }
 
 const availableAvatars = [
-    { id: 'josh_lite-en-US', name: 'Josh (Casual)' },
-    // In the future, more avatars can be added here
-    // { id: 'anna_lite-en-US', name: 'Anna (Professional)' },
+    { id: 'josh_lite-en-US', name: 'Josh (Casual)', image: 'https://picsum.photos/seed/josh/400/400' },
+    { id: 'anna_lite-en-US', name: 'Anna (Professional)', image: 'https://picsum.photos/seed/anna/400/400' },
+    { id: 'ryan_lite-en-US', name: 'Ryan (Presenter)', image: 'https://picsum.photos/seed/ryan/400/400' },
+    { id: 'mia_lite-en-US', name: 'Mia (Vlogger)', image: 'https://picsum.photos/seed/mia/400/400' },
+    { id: 'liam_lite-en-US', name: 'Liam (Storyteller)', image: 'https://picsum.photos/seed/liam/400/400' },
+    { id: 'chloe_lite-en-US', name: 'Chloe (Corporate)', image: 'https://picsum.photos/seed/chloe/400/400' },
 ]
 
 export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
@@ -44,23 +51,44 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
           control={form.control}
           name="avatarId"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="space-y-3">
               <FormLabel>Select Avatar</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose an AI avatar" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {availableAvatars.map((avatar) => (
-                    <SelectItem key={avatar.id} value={avatar.id}>
-                      {avatar.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
                <FormDescription>More avatars coming soon!</FormDescription>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  className="grid grid-cols-2 sm:grid-cols-3 gap-4"
+                  disabled={isLoading}
+                >
+                  {availableAvatars.map((avatar) => (
+                    <FormItem key={avatar.id} className="flex items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value={avatar.id} id={avatar.id} className="sr-only" />
+                      </FormControl>
+                      <Label
+                        htmlFor={avatar.id}
+                        className={cn(
+                          "relative rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all hover:opacity-90",
+                          "w-full aspect-[3/4]",
+                           field.value === avatar.id && "border-primary ring-2 ring-primary"
+                        )}
+                      >
+                         <Image
+                            src={avatar.image}
+                            alt={avatar.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                         />
+                         <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-black/50 text-white text-xs text-center truncate">
+                            {avatar.name}
+                         </div>
+                      </Label>
+                    </FormItem>
+                  ))}
+                </RadioGroup>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
