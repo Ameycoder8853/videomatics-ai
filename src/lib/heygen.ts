@@ -1,28 +1,32 @@
 
-const HEYGEN_API_URL = 'https://api.heygen.com/v1';
+const HEYGEN_API_URL = 'https://api.heygen.com/v2';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function createHeyGenVideo(scriptText: string, avatarId: string, apiKey: string): Promise<string | null> {
   try {
-    // Step 1: Create the video generation job using the v1 endpoint
-    const createResponse = await fetch(`${HEYGEN_API_URL}/video.generate`, {
+    // Step 1: Create the video generation job using the v2 endpoint
+    const createResponse = await fetch(`${HEYGEN_API_URL}/video/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
       },
       body: JSON.stringify({
-        test: false, 
-        text: scriptText,
-        avatar_id: avatarId,
+        test: false,
+        video_inputs: [{
+          input_text: scriptText,
+          avatar: {
+            avatar_id: avatarId,
+            avatar_style: "normal"
+          }
+        }]
       }),
     });
 
     if (!createResponse.ok) {
         let errorDetails = `Status: ${createResponse.status}, StatusText: ${createResponse.statusText}`;
         try {
-            // Check content type before parsing
             const contentType = createResponse.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const errorData = await createResponse.json();
@@ -32,7 +36,6 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
                 errorDetails = `HeyGen API returned non-JSON response: ${errorText.substring(0, 200)}...`;
             }
         } catch (e) {
-            // Fallback if parsing fails for any reason
             errorDetails = `Could not parse HeyGen error response. Status: ${createResponse.status}`;
         }
         throw new Error(errorDetails);
@@ -47,15 +50,15 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
 
     // Step 2: Poll for the video status until it's ready
     let attempts = 0;
-    const maxAttempts = 60; // Poll for up to 5 minutes (60 * 5s = 300s)
+    const maxAttempts = 60; // Poll for up to 5 minutes
     
     while (attempts < maxAttempts) {
-      await delay(5000); // Wait 5 seconds between polls
+      await delay(5000); // Wait 5 seconds
       
       const statusResponse = await fetch(`${HEYGEN_API_URL}/video_status.get?video_id=${videoId}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
         },
       });
 
