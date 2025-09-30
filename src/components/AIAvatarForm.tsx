@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 const avatarFormSchema = z.object({
   script: z.string().min(20, { message: 'Script must be at least 20 characters.' }).max(2000, { message: 'Script cannot exceed 2000 characters.' }),
-  avatarId: z.string().default('josh_lite-en-US'),
+  avatarId: z.string().default('anna_lite-en-US'),
 });
 
 export type AIAvatarFormValues = z.infer<typeof avatarFormSchema>;
@@ -27,12 +27,12 @@ interface AIAvatarFormProps {
 }
 
 const availableAvatars = [
-    { id: 'josh_lite-en-US', name: 'Josh (Casual)', image: 'https://picsum.photos/seed/josh/400/400' },
     { id: 'anna_lite-en-US', name: 'Anna (Professional)', image: 'https://picsum.photos/seed/anna/400/400' },
+    { id: 'josh_lite-en-US', name: 'Josh (Casual)', image: 'https://picsum.photos/seed/josh/400/400' },
+    { id: 'aadhya_public-en-IN', name: 'Aadhya (Indian)', image: 'https://picsum.photos/seed/aadhya/400/400' },
+    { id: 'veer_public-en-IN', name: 'Veer (Indian)', image: 'https://picsum.photos/seed/veer/400/400' },
     { id: 'ryan_lite-en-US', name: 'Ryan (Presenter)', image: 'https://picsum.photos/seed/ryan/400/400' },
     { id: 'mia_lite-en-US', name: 'Mia (Vlogger)', image: 'https://picsum.photos/seed/mia/400/400' },
-    { id: 'liam_lite-en-US', name: 'Liam (Storyteller)', image: 'https://picsum.photos/seed/liam/400/400' },
-    { id: 'chloe_lite-en-US', name: 'Chloe (Corporate)', image: 'https://picsum.photos/seed/chloe/400/400' },
 ]
 
 export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
@@ -40,7 +40,7 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
     resolver: zodResolver(avatarFormSchema),
     defaultValues: {
       script: 'Welcome to Videomatics AI! Here, you can transform your ideas into stunning videos with our cutting-edge artificial intelligence technology. Get started today and bring your vision to life.',
-      avatarId: 'josh_lite-en-US',
+      avatarId: 'anna_lite-en-US',
     },
   });
 
