@@ -18,11 +18,11 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
           input_text: scriptText,
           avatar: {
             avatar_id: avatarId,
-            avatar_style: "normal"
+            // The `avatar_style` parameter is invalid when a `voice` object is provided.
+            // Removing it fixes the "Bad Request" error.
           },
           voice: {
-            // This was the missing parameter causing the BAD REQUEST error.
-            // Specifying a voice is required when using input_text.
+            // Specifying a voice_id is required when using input_text.
             voice_id: "5e78313a52f7487c88a8a47941459a93" // Example: A high-quality English (India) voice
           }
         }]
@@ -35,7 +35,7 @@ export async function createHeyGenVideo(scriptText: string, avatarId: string, ap
             const contentType = createResponse.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const errorData = await createResponse.json();
-                errorDetails = `HeyGen API error (create): ${errorData.message || createResponse.statusText}`;
+                errorDetails = `HeyGen API error (create): code: ${errorData.code}, message: ${errorData.message || createResponse.statusText}`;
             } else {
                 const errorText = await createResponse.text();
                 errorDetails = `HeyGen API returned non-JSON response: ${errorText.substring(0, 200)}...`;
