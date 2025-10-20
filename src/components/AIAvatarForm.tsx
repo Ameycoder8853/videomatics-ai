@@ -114,14 +114,14 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
                   disabled={isLoading}
                 >
                   {availableAvatars.map((avatar) => (
-                    <FormItem key={avatar.id} className="flex items-center space-x-2 space-y-0">
+                    <div key={avatar.id}>
                       <FormControl>
                         <RadioGroupItem value={avatar.id} id={avatar.id} className="sr-only" />
                       </FormControl>
                       <Label
                         htmlFor={avatar.id}
                         className={cn(
-                          "relative rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all hover:opacity-90",
+                          "block relative rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all hover:opacity-90",
                           "w-full aspect-[3/4]",
                            field.value === avatar.id && "border-primary ring-2 ring-primary"
                         )}
@@ -131,14 +131,13 @@ export function AIAvatarForm({ onSubmit, isLoading }: AIAvatarFormProps) {
                             alt={avatar.name}
                             fill
                             className="object-cover"
-                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
                             data-ai-hint={avatar.dataAiHint}
                          />
-                         <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-black/50 text-white text-xs text-center truncate">
+                         <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-black/50 text-white text-xs text-center font-medium truncate">
                             {avatar.name}
                          </div>
                       </Label>
-                    </FormItem>
+                    </div>
                   ))}
                 </RadioGroup>
               </FormControl>
