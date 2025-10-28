@@ -1,5 +1,5 @@
 
-import { Composition, staticFile } from 'remotion';
+import { Composition, staticFile, registerRoot } from 'remotion';
 import { MyVideoComposition, myVideoSchema, CompositionProps } from './MyVideo';
 
 // Register your compositions here
@@ -32,3 +32,6 @@ export const RemotionRoot: React.FC = () => {
     </>
   );
 };
+
+// Register the root component with Remotion CLI
+registerRoot(RemotionRoot);
