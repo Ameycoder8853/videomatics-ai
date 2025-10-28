@@ -2,8 +2,19 @@
 'use client';
 
 import { Player, PlayerRef } from '@remotion/player';
-import { ComponentPropsWithoutRef, RefAttributes, useEffect, useState } from 'react';
+import { ComponentPropsWithoutRef, RefAttributes, useEffect, useState, Suspense, lazy } from 'react';
 import { MyVideoComposition, CompositionProps } from '@/remotion/MyVideo';
+import { Skeleton } from './ui/skeleton';
+
+// Use React.lazy to dynamically import the Player component.
+// This is a more robust way to handle code-splitting with Next.js and Webpack.
+const LazyPlayer = lazy(() =>
+  import('../remotion/Root').then(() => {
+    // The dynamic import of Root registers the compositions.
+    // We can then return the Player component in a default export format.
+    return { default: Player };
+  })
+);
 
 interface RemotionPlayerProps extends Omit<ComponentPropsWithoutRef<typeof Player>, 'component' | 'compositionWidth' | 'compositionHeight' | 'fps' | 'durationInFrames'> {
   compositionId: string; // ID of the composition to play
@@ -15,22 +26,6 @@ export const RemotionPlayer: React.FC<RemotionPlayerProps & RefAttributes<Player
   inputProps,
   ...playerProps
 }) => {
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    // This is essential for Remotion to find your components.
-    // It is also required for the Remotion Studio to work.
-    // We do it in a useEffect to avoid server-side execution and module loading issues.
-    import('../remotion/Root').then(() => {
-      setLoaded(true);
-    });
-  }, []);
-
-  if (!loaded) {
-    return null; // Or a loading spinner
-  }
-  
-  // This example assumes a single composition 'MyVideo' is generally used.
   const compositionWidth = 1080;
   const compositionHeight = 1920;
   const fps = 30;
@@ -38,16 +33,18 @@ export const RemotionPlayer: React.FC<RemotionPlayerProps & RefAttributes<Player
   const durationInFrames = 300; 
 
   return (
-    <Player
-      component={MyVideoComposition} // This should be the component itself, not the ID.
-      inputProps={inputProps} // Pass props directly
-      durationInFrames={durationInFrames}
-      compositionWidth={compositionWidth}
-      compositionHeight={compositionHeight}
-      fps={fps}
-      controls
-      loop
-      {...playerProps} // Spread other player props like style, className, poster etc.
-    />
+    <Suspense fallback={<Skeleton className="w-full h-full" />}>
+      <LazyPlayer
+        component={MyVideoComposition} // This should be the component itself
+        inputProps={inputProps} // Pass props directly
+        durationInFrames={durationInFrames}
+        compositionWidth={compositionWidth}
+        compositionHeight={compositionHeight}
+        fps={fps}
+        controls
+        loop
+        {...playerProps} // Spread other player props like style, className, poster etc.
+      />
+    </Suspense>
   );
 };

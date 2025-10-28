@@ -7,6 +7,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    esmExternals: 'loose', // Can help with resolving modern module formats
+  },
   images: {
     remotePatterns: [
       {
