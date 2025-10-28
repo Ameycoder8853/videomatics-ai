@@ -19,7 +19,7 @@ export interface VideoDocument {
 
   // URLs for generated assets stored in Firebase Storage
   imageUris: string[]; // Array of image URLs for slideshows, OR a single-element array with the avatar video URL
-  audioUri: string; // Generated audio download URL
+  audioUri: string; // Generated audio download URL (for slideshows)
   captions?: string; // Generated captions text
   musicUri?: string; // Selected background music URI
 
@@ -112,7 +112,7 @@ export const deleteVideoAndAssets = async (video: VideoDocument): Promise<void> 
   const { id: videoId, imageUris, audioUri } = video;
 
   try {
-    // `imageUris` can contain slideshow images or the final avatar video.
+    // `imageUris` can contain slideshow images or the final avatar video URL.
     // This logic handles both cases.
     if (imageUris && imageUris.length > 0) {
       const deletePromises = imageUris
@@ -121,7 +121,7 @@ export const deleteVideoAndAssets = async (video: VideoDocument): Promise<void> 
       await Promise.all(deletePromises);
     }
     
-    // Delete audio from Storage using its full download URL
+    // Delete audio from Storage using its full download URL (primarily for slideshows)
     if (audioUri && audioUri.includes('firebasestorage.googleapis.com')) {
         await deleteFileFromStorage(audioUri);
     }

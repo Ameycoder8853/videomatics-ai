@@ -72,6 +72,7 @@ export const useAvatarGenerationFlow = () => {
             setLoadingStep('Saving video to cloud...');
             videoId = await createVideoPlaceholder(user.uid);
 
+            // The videoUrl from HeyGen is a data URI, so we can upload it directly.
             const videoDownloadUrl = await uploadDataUriToStorage(avatarResult.videoUrl, `ai-avatar-files/${user.uid}/${videoId}/video.mp4`);
             
             const videoToSave: Partial<VideoDocument> = {
@@ -79,23 +80,26 @@ export const useAvatarGenerationFlow = () => {
                 title: script.title,
                 topic: data.topic,
                 scriptDetails: script,
-                // audioUri is no longer a separate asset, but we can store the main video URL here if needed or leave empty.
-                // Let's keep imageUris as the primary store for the final video asset.
+                // audioUri is no longer a separate asset for avatar videos.
+                // We will store the final video URL in imageUris to keep the data model consistent.
                 audioUri: '', 
                 imageUris: [videoDownloadUrl], 
-                captions: '', // No separate captions generated
+                captions: '', // No separate captions generated in this flow.
                 status: 'completed',
                 thumbnailUrl: 'https://placehold.co/300x200.png?text=Avatar+Video',
-                // Fields below are not applicable to avatar videos but are required by the type
+                // These fields are for slideshows but required by the type, so we set defaults.
                 primaryColor: '#000000',
                 secondaryColor: '#FFFFFF',
                 fontFamily: 'sans-serif',
                 imageDurationInFrames: 0,
-                totalDurationInFrames: 0,
+                totalDurationInFrames: 0, // Duration is unknown for avatar videos
             };
 
             await updateVideoDocument(videoId, videoToSave);
             toast({ title: 'Avatar Video Saved!', description: 'Your video is now on your dashboard.' });
+
+            // Update the preview URL to the permanent one from Firebase Storage
+            setGeneratedAvatarVideoUrl(videoDownloadUrl);
 
         } catch (error: any) {
             const errorMessage = error.message || 'An unknown error occurred during avatar video generation.';
