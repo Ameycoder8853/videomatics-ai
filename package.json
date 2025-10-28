@@ -39,6 +39,7 @@
     "@remotion/cloudrun": "4.0.369",
     "@remotion/player": "4.0.369",
     "@remotion/renderer": "4.0.369",
+    "@remotion/tailwind": "4.0.369",
     "@remotion/zod-types": "4.0.369",
     "@tanstack-query-firebase/react": "^1.0.5",
     "@tanstack/react-query": "^5.66.0",
