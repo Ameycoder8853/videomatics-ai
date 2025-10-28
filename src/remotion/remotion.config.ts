@@ -15,24 +15,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * The browser-side bundle can be configured here.
- */
-Config.setBundler('webpack', {
-  // Add custom webpack configuration here
-});
-
-/**
  * This is the main configuration object for Remotion.
  */
 Config.setProjectName('videomatics-ai');
-
-/**
- * Customize the browser that is used to render the videos.
- */
-Config.setBrowserExecutable(
-  // You can set a custom browser executable path here.
-  // By default, Remotion will download a private version of Chromium.
-);
 
 /**
  * Customize the output format of the videos.
