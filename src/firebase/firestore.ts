@@ -34,6 +34,10 @@ export interface VideoDocument {
   createdAt: Timestamp | Date;
   thumbnailUrl?: string; // URL of the first image, or a placeholder
   errorMessage?: string; // Optional: if status is 'failed'
+
+  // Fields for remote rendering
+  renderId?: string; // ID of the Remotion Cloud Run render job
+  renderUrl?: string; // The final URL of the remotely rendered video
 }
 
 const videosCollection = collection(db, 'videos');

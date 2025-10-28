@@ -3,6 +3,7 @@
 
 import { GenerateVideoScriptInput } from '@/ai/flows/generate-video-script';
 import { GenerateAvatarVideoInput } from '@/ai/flows/generate-avatar-video';
+import { RenderVideoInput } from '@/ai/flows/render-video';
 import { ai } from '@/ai/genkit';
 import wav from 'wav';
 
@@ -40,6 +41,18 @@ export async function generateAvatarVideoAction(input: GenerateAvatarVideoInput)
     } catch (error: any) {
         console.error('Error in generateAvatarVideoAction:', error);
         throw new Error(`AI Avatar video generation failed: ${error.message}`);
+    }
+}
+
+// Action to render a video on Cloud Run
+export async function renderVideoAction(input: RenderVideoInput): Promise<any> {
+    try {
+        const { renderVideo } = await import('@/ai/flows/render-video');
+        const result = await renderVideo(input);
+        return result;
+    } catch (error: any) {
+        console.error('Error in renderVideoAction:', error);
+        throw new Error(`Remote video rendering failed: ${error.message}`);
     }
 }
 

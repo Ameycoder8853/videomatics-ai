@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { handleClientSideRender } from '@/lib/remotion';
-import { getVideoDocument, deleteVideoAndAssets, type VideoDocument } from '@/firebase/firestore';
+import { renderVideoAction } from '@/app/actions';
+import { getVideoDocument, deleteVideoAndAssets, updateVideoDocument, type VideoDocument } from '@/firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { Timestamp } from 'firebase/firestore';
 import type { CompositionProps } from '@/remotion/MyVideo';
+import { getRenderProgress } from '@remotion/cloudrun';
+
 
 export const useVideoDetail = () => {
   const params = useParams();
@@ -59,40 +61,62 @@ export const useVideoDetail = () => {
     },
   });
 
-  const onRenderVideo = async () => {
-    if (!video || !video.scriptDetails) {
-      toast({ title: 'Error', description: 'Video data or script details missing for rendering.', variant: 'destructive' });
-      return;
-    }
-    setIsRendering(true);
-    setRenderProgress(0);
-    toast({ title: 'Rendering video...', description: 'This might take a moment.'});
-    try {
+  const cloudRenderMutation = useMutation({
+    mutationFn: async (videoToRender: VideoDocument) => {
+      if (!videoToRender.id || !videoToRender.scriptDetails) {
+        throw new Error("Video data is incomplete for rendering.");
+      }
+
       const remotionPropsForRender: CompositionProps = {
-        title: video.scriptDetails?.title || video.title,
-        sceneTexts: video.scriptDetails?.scenes.map(s => s.contentText) || [],
-        imageUris: video.imageUris || [],
-        audioUri: video.audioUri,
-        musicUri: video.musicUri,
-        captions: video.captions,
-        primaryColor: video.primaryColor,
-        secondaryColor: video.secondaryColor,
-        fontFamily: video.fontFamily,
-        imageDurationInFrames: video.imageDurationInFrames,
+        title: videoToRender.scriptDetails.title,
+        sceneTexts: videoToRender.scriptDetails.scenes.map(s => s.contentText),
+        imageUris: videoToRender.imageUris,
+        audioUri: videoToRender.audioUri,
+        musicUri: videoToRender.musicUri,
+        captions: videoToRender.captions,
+        primaryColor: videoToRender.primaryColor,
+        secondaryColor: videoToRender.secondaryColor,
+        fontFamily: videoToRender.fontFamily,
+        imageDurationInFrames: videoToRender.imageDurationInFrames,
       };
-      await handleClientSideRender({
+
+      const result = await renderVideoAction({
+        videoId: videoToRender.id,
         compositionId: 'MyVideo',
         inputProps: remotionPropsForRender,
-        onProgress: ({ progress }) => setRenderProgress(progress),
-        totalDurationInFrames: video.totalDurationInFrames,
       });
-      toast({ title: 'Video Rendered!', description: 'Your download should start automatically.' });
-    } catch (error: any) {
-      toast({ title: 'Render Failed', description: error.message, variant: 'destructive'});
-    } finally {
+
+      return result;
+    },
+    onMutate: () => {
+      setIsRendering(true);
+      setRenderProgress(0);
+      toast({ title: 'Cloud Render Started', description: 'Your video is being rendered on the server. This may take a few minutes.' });
+    },
+    onSuccess: async (data, videoToRender) => {
+      await updateVideoDocument(videoToRender.id!, { renderId: data.renderId, renderUrl: data.videoUrl });
+      queryClient.invalidateQueries({ queryKey: ['video', videoToRender.id] });
+      toast({ title: 'Render Complete!', description: 'Your video has been successfully rendered.' });
+      setIsRendering(false);
+      setRenderProgress(1); // Set to 100% on success
+    },
+    onError: (error: any) => {
+      toast({ title: 'Render Failed', description: error.message, variant: 'destructive', duration: 10000 });
       setIsRendering(false);
       setRenderProgress(null);
+    },
+  });
+
+
+  const handleCloudRender = async () => {
+    if (!video) return;
+
+    if (video.renderUrl) {
+      window.open(video.renderUrl, '_blank');
+      return;
     }
+
+    cloudRenderMutation.mutate(video);
   };
 
   const handleDeleteVideo = () => {
@@ -104,10 +128,10 @@ export const useVideoDetail = () => {
     video,
     isLoading,
     isError,
-    isRendering,
+    isRendering: cloudRenderMutation.isPending || isRendering,
     renderProgress,
     deleteMutation,
-    onRenderVideo,
+    handleCloudRender,
     handleDeleteVideo,
   };
 };

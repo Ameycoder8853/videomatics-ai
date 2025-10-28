@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Download, Trash2, Loader2, AlertTriangle, FileTextIcon, Film } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Loader2, AlertTriangle, FileTextIcon, Film, Server } from 'lucide-react';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
 import type { CompositionProps } from '@/remotion/MyVideo';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ import {
 import { VideoDetailSkeleton } from '@/components/VideoDetailSkeleton';
 import { VideoConfiguration } from '@/components/VideoConfiguration';
 import { useVideoDetail } from '@/hooks/use-video-detail';
+import { Progress } from '@/components/ui/progress';
 
 export default function VideoDetailPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function VideoDetailPage() {
     isRendering, 
     renderProgress, 
     deleteMutation,
-    onRenderVideo, 
+    handleCloudRender, 
     handleDeleteVideo 
   } = useVideoDetail();
 
@@ -69,6 +70,24 @@ export default function VideoDetailPage() {
 
   const thumbnailUrl = video.thumbnailUrl || video.imageUris?.[0] || 'https://placehold.co/300x200.png';
 
+  const renderDownloadButton = () => {
+    if (video.renderUrl) {
+      return (
+        <Button asChild size="sm" className="w-full sm:w-auto">
+          <a href={video.renderUrl} target="_blank" download>
+            <Download className="mr-2 h-4 w-4" /> Download Rendered Video
+          </a>
+        </Button>
+      );
+    }
+    return (
+       <Button onClick={handleCloudRender} disabled={isRendering || video.status !== 'completed'} variant="outline" size="sm" className="w-full sm:w-auto">
+          {isRendering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Server className="mr-2 h-4 w-4" />}
+          {isRendering ? `Rendering...` : 'Render on Cloud'}
+      </Button>
+    );
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
@@ -92,12 +111,7 @@ export default function VideoDetailPage() {
               )}
             </div>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                <Button onClick={onRenderVideo} disabled={isRendering || video.status !== 'completed'} variant="outline" size="sm" className="w-full sm:w-auto">
-                    {isRendering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    {isRendering 
-                      ? `Rendering... ${renderProgress !== null ? `${Math.round(renderProgress * 100)}%` : ''}` 
-                      : 'Download'}
-                </Button>
+                {renderDownloadButton()}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" disabled={deleteMutation.isPending} size="sm" className="w-full sm:w-auto">
@@ -125,6 +139,12 @@ export default function VideoDetailPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 p-4 sm:p-6">
           <div className="md:col-span-2 space-y-4 sm:space-y-6">
+             {isRendering && renderProgress !== null && (
+              <div className="mb-4">
+                <p className="text-sm font-medium text-center mb-2">Cloud Rendering Progress: {Math.round(renderProgress * 100)}%</p>
+                <Progress value={renderProgress * 100} className="w-full h-3" />
+              </div>
+            )}
             <div 
               className="bg-muted rounded-lg overflow-hidden shadow-inner w-full max-w-[280px] mx-auto bg-cover bg-center"
               style={{ aspectRatio: '9/16' }}
